@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { Badge, Button, Card, Chip, Label, OptionRow } from '#/components/ui'
+import { Card, Label } from '#/components/ui'
 
 type Health = { database: string; storage: string; claude: string }
 
@@ -35,7 +35,7 @@ function Home() {
       <header className="pb-2">
         <Label>Tutor</Label>
         <h1 className="font-display text-[30px] leading-tight font-extrabold">
-          Question <span className="hl">converter</span>
+          Question converter
         </h1>
         <p className="mt-1 text-sm font-bold text-muted">
           Snap a page, Claude reads and answers it, you check the unsure ones.
@@ -81,40 +81,6 @@ function Home() {
               })}
           </ul>
         )}
-      </Card>
-
-      <h2 className="mt-4 font-display text-[21px] font-extrabold">
-        Coming next: <span className="hl">review</span> cards
-      </h2>
-      <p className="-mt-3 text-sm font-bold text-muted">A sample of how flagged questions will look.</p>
-
-      <Card>
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Badge>Biology · Page 5 · Q8</Badge>
-          <Chip fill="lavender-soft">Medium confidence</Chip>
-        </div>
-        <div className="mb-1 text-xs font-extrabold uppercase tracking-[1.2px] text-muted">
-          Levels of organization
-        </div>
-        <p className="mb-4 text-[19px] leading-snug font-bold">
-          What level of organization is <span className="hl">Spirogyra</span>?
-        </p>
-        <div className="flex flex-col gap-2.5">
-          <OptionRow label="A" state="dimmed">Organ system</OptionRow>
-          <OptionRow label="B" state="dimmed">Organ</OptionRow>
-          <OptionRow label="C" state="correct">Cell</OptionRow>
-          <OptionRow label="D" state="dimmed">Tissue</OptionRow>
-        </div>
-        <div className="mt-4 rounded-[16px] border-[2.5px] border-ink bg-cream p-3 text-[15px] leading-relaxed">
-          Spirogyra is a filament of identical cells that each carry out all life processes
-          independently, so it works at the cellular level.
-        </div>
-        <div className="mt-4 flex gap-3">
-          <Button fill="paper" className="flex-1">
-            Change
-          </Button>
-          <Button className="flex-[1.6]">Looks right ✓</Button>
-        </div>
       </Card>
     </main>
   )

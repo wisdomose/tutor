@@ -32,7 +32,9 @@ than restyling from scratch.
 - **Nunito**, 700–800 — everything else. Question text 19–21/1.4 weight 700;
   body 15 weight 600–700; meta 12–13 weight 700.
 - **Labels**: 11–12px, weight 800, uppercase, letter-spacing 1.2px.
-- **Highlight**: key words get a lime background block (`padding: 0 3px`), like a highlighter.
+- **Highlight** (`.hl`): a lime background block, like a highlighter. Use it rarely —
+  only for the one thing on screen the reader must notice (e.g. the correct value
+  in an explanation). Never on titles or decoratively.
 
 ## Shape
 
