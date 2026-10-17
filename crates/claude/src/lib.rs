@@ -29,6 +29,46 @@ pub struct Response {
     pub output: Value,
     /// What the run would have cost on the API; billed to the subscription instead.
     pub cost_usd: Option<f64>,
+    pub input_tokens: Option<i64>,
+    pub output_tokens: Option<i64>,
+}
+
+/// The subscription's usage limit was reached. Returned inside the `anyhow::Error`;
+/// check with `err.downcast_ref::<UsageLimit>()` and retry after `resets_at`.
+#[derive(Debug)]
+pub struct UsageLimit {
+    pub message: String,
+    /// Unix seconds, when Claude Code reported it.
+    pub resets_at: Option<i64>,
+}
+
+impl std::fmt::Display for UsageLimit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Claude usage limit reached: {}", self.message)
+    }
+}
+
+impl std::error::Error for UsageLimit {}
+
+/// Claude Code reports a hit limit as an error result such as
+/// "Claude AI usage limit reached|1760720400" or "You've hit your limit · resets 6pm".
+fn usage_limit(text: &str) -> Option<UsageLimit> {
+    let lower = text.to_lowercase();
+    if !(lower.contains("usage limit")
+        || lower.contains("hit your limit")
+        || lower.contains("rate limit"))
+    {
+        return None;
+    }
+    let resets_at = text
+        .rsplit('|')
+        .next()
+        .and_then(|t| t.trim().parse::<i64>().ok())
+        .filter(|t| *t > 1_000_000_000);
+    Some(UsageLimit {
+        message: text.trim().chars().take(300).collect(),
+        resets_at,
+    })
 }
 
 pub struct Claude {
@@ -109,6 +149,9 @@ impl Claude {
             .find(|e| e["type"] == "result")
         else {
             let stderr = String::from_utf8_lossy(&out.stderr);
+            if let Some(limit) = usage_limit(&stderr) {
+                return Err(limit.into());
+            }
             bail!(
                 "claude exited with {} and no result: {}",
                 out.status,
@@ -117,6 +160,9 @@ impl Claude {
         };
 
         if result["is_error"] == true || result["subtype"] != "success" {
+            if let Some(limit) = usage_limit(result["result"].as_str().unwrap_or_default()) {
+                return Err(limit.into());
+            }
             bail!(
                 "claude failed ({}): {}",
                 result["subtype"],
@@ -128,9 +174,20 @@ impl Claude {
                 .context("claude returned no structured output")?,
             v => v.clone(),
         };
+        let usage = &result["usage"];
+        let input_tokens = [
+            "input_tokens",
+            "cache_creation_input_tokens",
+            "cache_read_input_tokens",
+        ]
+        .iter()
+        .filter_map(|k| usage[k].as_i64())
+        .reduce(|a, b| a + b);
         Ok(Response {
             output,
             cost_usd: result["total_cost_usd"].as_f64(),
+            input_tokens,
+            output_tokens: usage["output_tokens"].as_i64(),
         })
     }
 }
@@ -141,4 +198,18 @@ fn tail(s: &str) -> &str {
         .find(|&i| s.is_char_boundary(i))
         .unwrap_or(s.len());
     &s[start..]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::usage_limit;
+
+    #[test]
+    fn detects_usage_limits() {
+        let l = usage_limit("Claude AI usage limit reached|1760720400").unwrap();
+        assert_eq!(l.resets_at, Some(1760720400));
+        let l = usage_limit("You've hit your limit · resets 6pm (Africa/Lagos)").unwrap();
+        assert_eq!(l.resets_at, None);
+        assert!(usage_limit("Invalid JSON schema").is_none());
+    }
 }
