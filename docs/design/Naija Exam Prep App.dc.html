@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #E8E4F5; font-family: Nunito, system-ui, sans-serif; }
+  a { color: #5B3DF5; text-decoration: none; }
+  a:hover { color: #3A20D6; }
+  *::-webkit-scrollbar { width: 0; height: 0; }
+</style>
+</helmet>
+
+<section style="display: flex; flex-direction: column; gap: 28px; padding: 48px 56px 60px;">
+  <div style="display: flex; align-items: baseline; gap: 16px;">
+    <div style="font-family: 'Baloo 2', Nunito, sans-serif; font-weight: 800; font-size: 34px; color: #16130F;">Sticker direction — outlined, lime + lavender</div>
+    <div style="font-family: Nunito; font-size: 16px; font-weight: 700; color: #6B6480;">Turn 2 · Dashboard, question, answer reveal</div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start;">
+
+    <!-- ── 2a Dashboard ───────────────────────────────────────── -->
+    <div id="2a" style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 15px; color: #16130F; background: #D6F84A; border: 2px solid #16130F; border-radius: 8px; padding: 2px 10px;">2a</div>
+        <div style="font-family: Nunito; font-weight: 700; font-size: 15px; color: #16130F;">Dashboard</div>
+      </div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+        <div style="background: #FDFAF2; min-height: 100%; display: flex; flex-direction: column; font-family: Nunito, sans-serif;">
+          <div style="flex: 1; padding: 10px 18px 24px; box-sizing: border-box;">
+
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0 18px;">
+              <div>
+                <div style="font-size: 13px; font-weight: 800; color: #6B6157; letter-spacing: 0.4px; text-transform: uppercase;">Good evening</div>
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 28px; font-weight: 800; color: #16130F; line-height: 1.05;">Chidera</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 7px; background: #D6F84A; border: 2.5px solid #16130F; border-radius: 14px; padding: 7px 12px 7px 9px;">
+                  <div style="font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #16130F;">12</div>
+                  <div style="font-size: 12px; font-weight: 800; color: #16130F; line-height: 1.1;">day<br>streak</div>
+                </div>
+                <div style="width: 46px; height: 46px; border-radius: 15px; background: #C7B2F5; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 19px; font-weight: 800; color: #16130F;">C</div>
+              </div>
+            </div>
+
+            <div style="background: #C7B2F5; border: 2.5px solid #16130F; border-radius: 20px; padding: 18px; margin-bottom: 14px;">
+              <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 14px;">
+                <div>
+                  <div style="font-size: 12px; font-weight: 800; color: #16130F; letter-spacing: 1.2px; text-transform: uppercase;">Level 7</div>
+                  <div style="font-family: 'Baloo 2', sans-serif; font-size: 30px; font-weight: 800; color: #16130F; line-height: 1.05;">Scholar</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-family: 'Baloo 2', sans-serif; font-size: 23px; font-weight: 800; color: #16130F;">1,240</div>
+                  <div style="font-size: 12px; font-weight: 800; color: #4A3D68;">/ 2,000 XP</div>
+                </div>
+              </div>
+              <div style="height: 20px; border-radius: 10px; background: #FDFAF2; border: 2.5px solid #16130F; padding: 3px; box-sizing: border-box; overflow: hidden;">
+                <div style="width: 62%; height: 100%; border-radius: 6px; background: #D6F84A; border-right: 2.5px solid #16130F;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                <div style="font-size: 13px; font-weight: 800; color: #16130F;">760 XP to Level 8</div>
+                <div style="font-size: 13px; font-weight: 700; color: #4A3D68;">2 freezes left</div>
+              </div>
+            </div>
+
+            <sc-if value="{{ showExamCountdown }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; align-items: center; gap: 12px; background: #16130F; border: 2.5px solid #16130F; border-radius: 16px; padding: 13px 16px; margin-bottom: 14px;">
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 26px; font-weight: 800; color: #D6F84A; line-height: 1;">63</div>
+                <div style="flex: 1;">
+                  <div style="font-size: 14px; font-weight: 800; color: #FDFAF2;">days to JAMB 2026</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #A79E92;">Tue 14 April · 4 subjects registered</div>
+                </div>
+                <div style="font-size: 13px; font-weight: 800; color: #D6F84A;">Plan →</div>
+              </div>
+            </sc-if>
+
+            <div style="display: flex; gap: 12px; margin-bottom: 14px;">
+              <div style="flex: 1; background: #fff; border: 2.5px solid #16130F; border-radius: 16px; padding: 14px;">
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 30px; font-weight: 800; color: #16130F; line-height: 1;">68<span style="font-size: 18px;">%</span></div>
+                <div style="font-size: 13px; font-weight: 800; color: #16130F; margin-top: 3px;">Accuracy</div>
+                <div style="display: inline-block; background: #D6F84A; font-size: 11px; font-weight: 800; color: #16130F; padding: 1px 5px; margin-top: 4px;">up 5% this week</div>
+              </div>
+              <div style="flex: 1; background: #fff; border: 2.5px solid #16130F; border-radius: 16px; padding: 14px;">
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 30px; font-weight: 800; color: #16130F; line-height: 1;">2,417</div>
+                <div style="font-size: 13px; font-weight: 800; color: #16130F; margin-top: 3px;">Questions done</div>
+                <div style="display: inline-block; background: #E6DBFC; font-size: 11px; font-weight: 800; color: #16130F; padding: 1px 5px; margin-top: 4px;">184 this week</div>
+              </div>
+            </div>
+
+            <div style="background: #D6F84A; border: 2.5px solid #16130F; border-radius: 20px; padding: 18px; margin-bottom: 14px;">
+              <div style="font-size: 12px; font-weight: 800; color: #16130F; letter-spacing: 1.2px; text-transform: uppercase;">Daily challenge</div>
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 25px; font-weight: 800; color: #16130F; line-height: 1.15; margin: 3px 0 4px;">15 mixed questions</div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+                <div style="background: #16130F; border-radius: 8px; padding: 3px 9px; font-family: 'Baloo 2', sans-serif; font-size: 13px; font-weight: 800; color: #D6F84A;">2× XP</div>
+                <div style="font-size: 13px; font-weight: 800; color: #3E3A22;">ends in 5h 12m</div>
+              </div>
+              <div style="background: #16130F; border-radius: 17px;">
+                <div style="background: #C7B2F5; border: 2.5px solid #16130F; border-radius: 17px; padding: 14px; text-align: center; font-family: 'Baloo 2', sans-serif; font-size: 18px; font-weight: 800; color: #16130F; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Start challenge</div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 13px; background: #E6DBFC; border: 2.5px solid #16130F; border-radius: 16px; padding: 13px 14px; margin-bottom: 22px;">
+              <div style="width: 44px; height: 44px; border-radius: 13px; background: #fff; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #16130F;">24</div>
+              <div style="flex: 1;">
+                <div style="font-size: 15px; font-weight: 800; color: #16130F;">Review queue due</div>
+                <div style="font-size: 12px; font-weight: 700; color: #574B72;">Questions you missed, spaced out</div>
+              </div>
+              <div style="background: #16130F; border-radius: 13px;">
+                <div style="background: #fff; border: 2.5px solid #16130F; border-radius: 13px; padding: 8px 14px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #16130F; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Review</div>
+              </div>
+            </div>
+
+            <div style="font-family: 'Baloo 2', sans-serif; font-size: 21px; font-weight: 800; color: #16130F; margin-bottom: 12px;">Continue where you <span style="background: #D6F84A; padding: 0 4px;">stopped</span></div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 12px; background: #fff; border: 2.5px solid #16130F; border-radius: 16px; padding: 13px;">
+                <div style="width: 48px; height: 48px; border-radius: 14px; background: #C7B2F5; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #16130F;">PHY</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 15px; font-weight: 800; color: #16130F;">Physics · Waves</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #6B6157; margin-bottom: 7px;">Question 14 of 40 · WAEC 2015</div>
+                  <div style="height: 12px; border-radius: 7px; background: #FDFAF2; border: 2px solid #16130F; padding: 1.5px; box-sizing: border-box; overflow: hidden;">
+                    <div style="width: 35%; height: 100%; border-radius: 4px; background: #C7B2F5;"></div>
+                  </div>
+                </div>
+                <div style="background: #16130F; border-radius: 13px;">
+                  <div style="background: #D6F84A; border: 2.5px solid #16130F; border-radius: 13px; padding: 8px 13px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #16130F; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Resume</div>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 12px; background: #fff; border: 2.5px solid #16130F; border-radius: 16px; padding: 13px;">
+                <div style="width: 48px; height: 48px; border-radius: 14px; background: #D6F84A; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #16130F;">CHM</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 15px; font-weight: 800; color: #16130F;">Chemistry · Mole concept</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #6B6157; margin-bottom: 7px;">Question 31 of 50 · JAMB 2019</div>
+                  <div style="height: 12px; border-radius: 7px; background: #FDFAF2; border: 2px solid #16130F; padding: 1.5px; box-sizing: border-box; overflow: hidden;">
+                    <div style="width: 62%; height: 100%; border-radius: 4px; background: #D6F84A;"></div>
+                  </div>
+                </div>
+                <div style="background: #16130F; border-radius: 13px;">
+                  <div style="background: #D6F84A; border: 2.5px solid #16130F; border-radius: 13px; padding: 8px 13px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #16130F; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Resume</div>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 12px; background: #fff; border: 2.5px solid #16130F; border-radius: 16px; padding: 13px;">
+                <div style="width: 48px; height: 48px; border-radius: 14px; background: #E6DBFC; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #16130F;">ENG</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 15px; font-weight: 800; color: #16130F;">English · Comprehension</div>
+                  <div style="font-size: 12px; font-weight: 700; color: #6B6157; margin-bottom: 7px;">Question 8 of 60 · NECO 2021</div>
+                  <div style="height: 12px; border-radius: 7px; background: #FDFAF2; border: 2px solid #16130F; padding: 1.5px; box-sizing: border-box; overflow: hidden;">
+                    <div style="width: 13%; height: 100%; border-radius: 4px; background: #E6DBFC;"></div>
+                  </div>
+                </div>
+                <div style="background: #16130F; border-radius: 13px;">
+                  <div style="background: #D6F84A; border: 2.5px solid #16130F; border-radius: 13px; padding: 8px 13px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #16130F; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Resume</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="position: sticky; bottom: 0; background: #FDFAF2; border-top: 2.5px solid #16130F; display: flex; align-items: center; padding: 10px 8px 14px;">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <div style="width: 40px; height: 8px; border-radius: 4px; background: #D6F84A; border: 2px solid #16130F;"></div>
+              <div style="font-size: 12px; font-weight: 800; color: #16130F;">Home</div>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <div style="width: 40px; height: 8px; border-radius: 4px; background: transparent;"></div>
+              <div style="font-size: 12px; font-weight: 700; color: #8A8177;">Practice</div>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <div style="width: 40px; height: 8px; border-radius: 4px; background: transparent;"></div>
+              <div style="font-size: 12px; font-weight: 700; color: #8A8177;">Review</div>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <div style="width: 40px; height: 8px; border-radius: 4px; background: transparent;"></div>
+              <div style="font-size: 12px; font-weight: 700; color: #8A8177;">Mastery</div>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <div style="width: 40px; height: 8px; border-radius: 4px; background: transparent;"></div>
+              <div style="font-size: 12px; font-weight: 700; color: #8A8177;">Me</div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ── 2b Question screen ─────────────────────────────────── -->
+    <div id="2b" style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 15px; color: #16130F; background: #D6F84A; border: 2px solid #16130F; border-radius: 8px; padding: 2px 10px;">2b</div>
+        <div style="font-family: Nunito; font-weight: 700; font-size: 15px; color: #16130F;">Question · unanswered</div>
+      </div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+        <div style="background: #FDFAF2; min-height: 100%; display: flex; flex-direction: column; font-family: Nunito, sans-serif;">
+          <div style="flex: 1; padding: 8px 18px 24px; box-sizing: border-box;">
+
+            <div style="display: flex; align-items: center; gap: 10px; padding: 6px 0 16px;">
+              <div style="width: 42px; height: 42px; border-radius: 13px; background: #fff; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 20px; font-weight: 800; color: #16130F;">←</div>
+              <div style="flex: 1;">
+                <div style="font-size: 15px; font-weight: 800; color: #16130F;">Physics Mock</div>
+                <div style="font-size: 12px; font-weight: 700; color: #6B6157;">JAMB 2015 · 40 questions</div>
+              </div>
+              <sc-if value="{{ showTimer }}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; align-items: center; gap: 7px; background: #16130F; border-radius: 13px; padding: 9px 13px;">
+                  <div style="width: 8px; height: 8px; border-radius: 50%; background: #D6F84A;"></div>
+                  <div style="font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #FDFAF2; letter-spacing: 0.5px;">24:38</div>
+                </div>
+              </sc-if>
+              <div style="width: 42px; height: 42px; border-radius: 13px; background: #fff; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #16130F;">☆</div>
+            </div>
+
+            <div style="background: #E6DBFC; border: 2.5px solid #16130F; border-radius: 18px; padding: 13px; margin-bottom: 16px;">
+              <div style="display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px;">
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #C7B2F5; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #16130F; display: flex; align-items: center; justify-content: center;">1</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #C7B2F5; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #16130F; display: flex; align-items: center; justify-content: center;">2</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #C7B2F5; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #16130F; display: flex; align-items: center; justify-content: center;">3</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #D6F84A; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #16130F; display: flex; align-items: center; justify-content: center;">4</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #C7B2F5; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #16130F; display: flex; align-items: center; justify-content: center;">5</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #C7B2F5; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #16130F; display: flex; align-items: center; justify-content: center;">6</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #D6F84A; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #16130F; display: flex; align-items: center; justify-content: center;">7</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #16130F; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #D6F84A; display: flex; align-items: center; justify-content: center;">8</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #FDFAF2; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #8A8177; display: flex; align-items: center; justify-content: center;">9</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #FDFAF2; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #8A8177; display: flex; align-items: center; justify-content: center;">10</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #FDFAF2; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #8A8177; display: flex; align-items: center; justify-content: center;">11</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #FDFAF2; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; color: #8A8177; display: flex; align-items: center; justify-content: center;">12</div>
+                <div style="width: 34px; height: 34px; border-radius: 10px; background: #FDFAF2; border: 2px solid #16130F; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 13px; color: #8A8177; display: flex; align-items: center; justify-content: center;">···</div>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 12px; border-top: 2px solid #16130F; padding-top: 10px;">
+                <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 4px; background: #C7B2F5; border: 1.5px solid #16130F;"></div><div style="font-size: 11px; font-weight: 800; color: #3B3428;">Answered</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 4px; background: #D6F84A; border: 1.5px solid #16130F;"></div><div style="font-size: 11px; font-weight: 800; color: #3B3428;">Flagged</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 4px; background: #16130F;"></div><div style="font-size: 11px; font-weight: 800; color: #3B3428;">Now</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 4px; background: #FDFAF2; border: 1.5px solid #16130F;"></div><div style="font-size: 11px; font-weight: 800; color: #3B3428;">Left</div></div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 800; color: #16130F;">QUESTION 8 OF 40</div>
+              <div style="background: #16130F; border-radius: 8px; padding: 3px 9px; font-size: 11px; font-weight: 800; color: #D6F84A;">HARD · 15 XP</div>
+            </div>
+
+            <div style="font-size: 21px; font-weight: 700; line-height: 1.4; color: #16130F; text-wrap: pretty; margin-bottom: 14px;">A body of mass 5 kg moving with a velocity of 12 m s<span style="font-size: 14px; vertical-align: super;">−1</span> is brought to rest in 4 s. Calculate the magnitude of the average <span style="background: #D6F84A; padding: 0 3px;">retarding force</span>.</div>
+
+            <div style="background: #fff; border: 2.5px solid #16130F; border-radius: 16px; padding: 14px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 14px;">
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 700; color: #16130F;">F = m<span style="font-style: italic;">Δv</span> / <span style="font-style: italic;">Δt</span></div>
+              <div style="flex: 1; font-size: 12px; font-weight: 700; color: #6B6157;">Formula sheet is in the pause menu.</div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="background: #16130F; border-radius: 18px;">
+                <div style="background: #fff; border: 2.5px solid #16130F; border-radius: 18px; padding: 15px; display: flex; align-items: center; gap: 14px; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">
+                  <div style="width: 38px; height: 38px; border-radius: 12px; background: #E6DBFC; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #16130F;">A</div>
+                  <div style="font-size: 19px; font-weight: 700; color: #16130F;">6.0 N</div>
+                </div>
+              </div>
+              <div style="background: #16130F; border-radius: 18px;">
+                <div style="background: #fff; border: 2.5px solid #16130F; border-radius: 18px; padding: 15px; display: flex; align-items: center; gap: 14px; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">
+                  <div style="width: 38px; height: 38px; border-radius: 12px; background: #E6DBFC; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #16130F;">B</div>
+                  <div style="font-size: 19px; font-weight: 700; color: #16130F;">10.0 N</div>
+                </div>
+              </div>
+              <div style="background: #16130F; border-radius: 18px;">
+                <div style="background: #fff; border: 2.5px solid #16130F; border-radius: 18px; padding: 15px; display: flex; align-items: center; gap: 14px; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">
+                  <div style="width: 38px; height: 38px; border-radius: 12px; background: #E6DBFC; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #16130F;">C</div>
+                  <div style="font-size: 19px; font-weight: 700; color: #16130F;">15.0 N</div>
+                </div>
+              </div>
+              <div style="background: #16130F; border-radius: 18px;">
+                <div style="background: #fff; border: 2.5px solid #16130F; border-radius: 18px; padding: 15px; display: flex; align-items: center; gap: 14px; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">
+                  <div style="width: 38px; height: 38px; border-radius: 12px; background: #E6DBFC; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #16130F;">D</div>
+                  <div style="font-size: 19px; font-weight: 700; color: #16130F;">60.0 N</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="position: sticky; bottom: 0; background: #FDFAF2; border-top: 2.5px solid #16130F; padding: 14px 18px 16px; display: flex; gap: 12px;">
+            <div style="background: #16130F; border-radius: 16px; flex: 1;">
+              <div style="background: #fff; border: 2.5px solid #16130F; border-radius: 16px; padding: 14px; text-align: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #16130F; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Previous</div>
+            </div>
+            <div style="background: #16130F; border-radius: 16px; flex: 1.6;">
+              <div style="background: #D6F84A; border: 2.5px solid #16130F; border-radius: 16px; padding: 14px; text-align: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #16130F; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Next question →</div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ── 2c Answer revealed ─────────────────────────────────── -->
+    <div id="2c" style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 15px; color: #16130F; background: #D6F84A; border: 2px solid #16130F; border-radius: 8px; padding: 2px 10px;">2c</div>
+        <div style="font-family: Nunito; font-weight: 700; font-size: 15px; color: #16130F;">Answer revealed · wrong pick</div>
+      </div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+        <div style="background: #FDFAF2; min-height: 100%; display: flex; flex-direction: column; font-family: Nunito, sans-serif;">
+          <div style="flex: 1; padding: 8px 18px 24px; box-sizing: border-box;">
+
+            <div style="display: flex; align-items: center; gap: 10px; padding: 6px 0 16px;">
+              <div style="width: 42px; height: 42px; border-radius: 13px; background: #fff; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 20px; font-weight: 800; color: #16130F;">←</div>
+              <div style="flex: 1;">
+                <div style="font-size: 15px; font-weight: 800; color: #16130F;">Physics Mock</div>
+                <div style="font-size: 12px; font-weight: 700; color: #6B6157;">JAMB 2015 · 40 questions</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 7px; background: #16130F; border-radius: 13px; padding: 9px 13px;">
+                <div style="width: 8px; height: 8px; border-radius: 50%; background: #D6F84A;"></div>
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #FDFAF2; letter-spacing: 0.5px;">24:12</div>
+              </div>
+              <div style="width: 42px; height: 42px; border-radius: 13px; background: #D6F84A; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #16130F;">★</div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 800; color: #16130F;">QUESTION 8 OF 40</div>
+              <div style="background: #16130F; border-radius: 8px; padding: 3px 9px; font-size: 11px; font-weight: 800; color: #D6F84A;">HARD · 15 XP</div>
+            </div>
+
+            <div style="font-size: 19px; font-weight: 700; line-height: 1.4; color: #16130F; margin-bottom: 16px;">A body of mass 5 kg moving with a velocity of 12 m s<span style="font-size: 13px; vertical-align: super;">−1</span> is brought to rest in 4 s. Calculate the magnitude of the average retarding force.</div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="background: #FDFAF2; border: 2.5px solid #16130F; border-radius: 18px; padding: 14px; display: flex; align-items: center; gap: 14px; opacity: 0.45;">
+                <div style="width: 34px; height: 34px; border-radius: 11px; background: #fff; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #16130F;">A</div>
+                <div style="font-size: 18px; font-weight: 700; color: #16130F;">6.0 N</div>
+              </div>
+              <div style="background: #fff; border: 2.5px solid #16130F; border-radius: 18px; padding: 14px; display: flex; align-items: center; gap: 14px;">
+                <div style="width: 34px; height: 34px; border-radius: 11px; background: #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #FDFAF2;">B</div>
+                <div style="flex: 1; font-size: 18px; font-weight: 700; color: #16130F; text-decoration: line-through; text-decoration-thickness: 2px;">10.0 N</div>
+                <div style="font-size: 11px; font-weight: 800; color: #16130F; border: 2px solid #16130F; border-radius: 8px; padding: 3px 8px;">YOUR PICK</div>
+              </div>
+              <div style="background: #D6F84A; border: 3px solid #16130F; border-radius: 18px; padding: 14px; display: flex; align-items: center; gap: 14px;">
+                <div style="width: 34px; height: 34px; border-radius: 11px; background: #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #D6F84A;">C</div>
+                <div style="flex: 1; font-size: 18px; font-weight: 800; color: #16130F;">15.0 N</div>
+                <div style="font-size: 11px; font-weight: 800; color: #16130F; background: #fff; border: 2px solid #16130F; border-radius: 8px; padding: 3px 8px;">CORRECT</div>
+              </div>
+              <div style="background: #FDFAF2; border: 2.5px solid #16130F; border-radius: 18px; padding: 14px; display: flex; align-items: center; gap: 14px; opacity: 0.45;">
+                <div style="width: 34px; height: 34px; border-radius: 11px; background: #fff; border: 2.5px solid #16130F; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #16130F;">D</div>
+                <div style="font-size: 18px; font-weight: 700; color: #16130F;">60.0 N</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="position: sticky; bottom: 0; background: #C7B2F5; border-top: 3px solid #16130F; border-radius: 24px 24px 0 0; padding: 18px 18px 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px;">
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 800; color: #16130F; line-height: 1.1;">Not this time — here's why</div>
+              <div style="background: #D6F84A; border: 2.5px solid #16130F; border-radius: 12px; padding: 6px 11px; font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 800; color: #16130F; white-space: nowrap;">+{{ xpEarned }} XP</div>
+            </div>
+            <div style="background: #FDFAF2; border: 2.5px solid #16130F; border-radius: 16px; padding: 13px; margin-bottom: 12px;">
+              <div style="font-size: 15px; font-weight: 600; line-height: 1.5; color: #16130F;">Retarding force is the rate of change of momentum: F = m(v − u)/t = 5(0 − 12)/4 = −15 N, so the magnitude is <span style="font-weight: 800; background: #D6F84A; padding: 0 3px;">15.0 N</span>. Option B comes from dividing by 6 s instead of 4 s.</div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;">
+              <div style="background: #FDFAF2; border: 2px solid #16130F; border-radius: 10px; padding: 4px 9px; font-size: 11px; font-weight: 800; color: #16130F;">TOPIC · NEWTON'S LAWS</div>
+              <div style="background: #FDFAF2; border: 2px solid #16130F; border-radius: 10px; padding: 4px 9px; font-size: 11px; font-weight: 800; color: #16130F;">BACK IN 2 DAYS</div>
+            </div>
+            <div style="background: #16130F; border-radius: 17px;">
+              <div style="background: #D6F84A; border: 2.5px solid #16130F; border-radius: 17px; padding: 14px; text-align: center; font-family: 'Baloo 2', sans-serif; font-size: 18px; font-weight: 800; color: #16130F; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Next question →</div>
+            </div>
+          </div>
+        </div>
+      </x-import>
+    </div>
+
+  </div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 28px; padding: 48px 56px 80px;">
+  <div style="display: flex; align-items: baseline; gap: 16px;">
+    <div style="font-family: 'Baloo 2', Nunito, sans-serif; font-weight: 800; font-size: 34px; color: #1B1730;">Kọ́ — WAEC / NECO / JAMB study app</div>
+    <div style="font-family: Nunito; font-size: 16px; font-weight: 700; color: #6B6480;">Turn 1 · Dashboard, question screen, answer reveal, dark mode</div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start;">
+
+    <!-- ── 1a Dashboard (light) ───────────────────────────────── -->
+    <div id="1a" style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 15px; color: #fff; background: #5B3DF5; border-radius: 8px; padding: 3px 10px;">1a</div>
+        <div style="font-family: Nunito; font-weight: 700; font-size: 15px; color: #1B1730;">Dashboard</div>
+      </div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+        <div style="background: #FBF7F0; min-height: 100%; display: flex; flex-direction: column; font-family: Nunito, sans-serif;"><div style="flex: 1; padding: 8px 18px 24px; box-sizing: border-box;">
+
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0 18px;">
+            <div>
+              <div style="font-size: 14px; font-weight: 700; color: #6B6480; letter-spacing: 0.2px;">Good evening</div>
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 27px; font-weight: 800; color: #1B1730; line-height: 1.1;">Chidera</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 7px; background: #FFE9C2; border-radius: 14px; padding: 8px 13px 8px 10px;">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background: #FFB020; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 13px; font-weight: 800; color: #4A2C00;">12</div>
+                <div style="font-size: 13px; font-weight: 800; color: #8A5A00;">day streak</div>
+              </div>
+              <div style="width: 44px; height: 44px; border-radius: 15px; background: #12B76A; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 18px; font-weight: 800; color: #fff;">C</div>
+            </div>
+          </div>
+
+          <div style="background: #5B3DF5; border-radius: 20px; padding: 20px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 14px;">
+              <div>
+                <div style="font-size: 13px; font-weight: 800; color: #C9BCFF; letter-spacing: 1.2px; text-transform: uppercase;">Level 7</div>
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 26px; font-weight: 800; color: #fff; line-height: 1.15;">Scholar</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 800; color: #fff;">1,240</div>
+                <div style="font-size: 12px; font-weight: 700; color: #C9BCFF;">/ 2,000 XP</div>
+              </div>
+            </div>
+            <div style="height: 16px; border-radius: 10px; background: #3A20D6; padding: 3px; box-sizing: border-box;">
+              <div style="width: 62%; height: 100%; border-radius: 8px; background: #C6F135;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+              <div style="font-size: 13px; font-weight: 700; color: #E4DCFF;">760 XP to Level 8</div>
+              <div style="font-size: 13px; font-weight: 700; color: #C9BCFF;">2 streak freezes left</div>
+            </div>
+          </div>
+
+          <sc-if value="{{ showExamCountdown }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; align-items: center; gap: 12px; background: #1B1730; border-radius: 16px; padding: 14px 16px; margin-bottom: 14px;">
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 24px; font-weight: 800; color: #C6F135; line-height: 1;">63</div>
+              <div style="flex: 1;">
+                <div style="font-size: 14px; font-weight: 800; color: #fff;">days to JAMB 2026</div>
+                <div style="font-size: 12px; font-weight: 700; color: #9C93BE;">Tue 14 April · 4 subjects registered</div>
+              </div>
+              <div style="font-size: 13px; font-weight: 800; color: #C6F135;">Plan</div>
+            </div>
+          </sc-if>
+
+          <div style="display: flex; gap: 12px; margin-bottom: 14px;">
+            <div style="flex: 1; background: #E7F8EF; border-radius: 16px; padding: 15px;">
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 28px; font-weight: 800; color: #0B8A50; line-height: 1;">68<span style="font-size: 17px;">%</span></div>
+              <div style="font-size: 13px; font-weight: 800; color: #2F7A57; margin-top: 4px;">Accuracy</div>
+              <div style="font-size: 11px; font-weight: 700; color: #6FA88C;">up 5% this week</div>
+            </div>
+            <div style="flex: 1; background: #EFEBFF; border-radius: 16px; padding: 15px;">
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 28px; font-weight: 800; color: #3A20D6; line-height: 1;">2,417</div>
+              <div style="font-size: 13px; font-weight: 800; color: #5041A8; margin-top: 4px;">Questions done</div>
+              <div style="font-size: 11px; font-weight: 700; color: #8B7FD0;">184 this week</div>
+            </div>
+          </div>
+
+          <div style="background: #FFB020; border-radius: 20px; padding: 18px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <div style="font-size: 12px; font-weight: 800; color: #7A4E00; letter-spacing: 1.2px; text-transform: uppercase;">Daily challenge</div>
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 21px; font-weight: 800; color: #3B2400; line-height: 1.2; margin-top: 2px;">15 mixed questions</div>
+                <div style="font-size: 13px; font-weight: 800; color: #7A4E00; margin-top: 3px;">Double XP · ends in 5h 12m</div>
+              </div>
+              <div style="width: 58px; height: 58px; border-radius: 18px; background: #FFD98A; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 19px; font-weight: 800; color: #7A4E00;">2×</div>
+            </div>
+            <div style="background: #B36F00; border-radius: 17px; margin-top: 16px;">
+              <div style="background: #1B1730; border-radius: 17px; padding: 14px; text-align: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #fff; letter-spacing: 0.4px; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Start challenge</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 13px; background: #DDF4FF; border-radius: 16px; padding: 14px 16px; margin-bottom: 22px;">
+            <div style="width: 42px; height: 42px; border-radius: 13px; background: #0E7FA8; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #fff;">24</div>
+            <div style="flex: 1;">
+              <div style="font-size: 15px; font-weight: 800; color: #06455C;">Review queue due</div>
+              <div style="font-size: 12px; font-weight: 700; color: #3D7E96;">Questions you missed, spaced out</div>
+            </div>
+            <div style="background: #06455C; border-radius: 13px;">
+              <div style="background: #0E7FA8; border-radius: 13px; padding: 9px 15px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #fff; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Review</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px;">
+            <div style="font-family: 'Baloo 2', sans-serif; font-size: 19px; font-weight: 800; color: #1B1730;">Continue where you stopped</div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 13px; background: #fff; border-radius: 16px; padding: 14px;">
+              <div style="width: 46px; height: 46px; border-radius: 14px; background: #5B3DF5; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 800; color: #fff;">PHY</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 15px; font-weight: 800; color: #1B1730;">Physics · Waves</div>
+                <div style="font-size: 12px; font-weight: 700; color: #6B6480; margin-bottom: 7px;">Question 14 of 40 · WAEC 2015</div>
+                <div style="height: 8px; border-radius: 5px; background: #EDE9F7;">
+                  <div style="width: 35%; height: 100%; border-radius: 5px; background: #5B3DF5;"></div>
+                </div>
+              </div>
+              <div style="background: #3A20D6; border-radius: 13px;">
+                <div style="background: #5B3DF5; border-radius: 13px; padding: 9px 14px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #fff; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Resume</div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 13px; background: #fff; border-radius: 16px; padding: 14px;">
+              <div style="width: 46px; height: 46px; border-radius: 14px; background: #12B76A; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 800; color: #fff;">CHM</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 15px; font-weight: 800; color: #1B1730;">Chemistry · Mole concept</div>
+                <div style="font-size: 12px; font-weight: 700; color: #6B6480; margin-bottom: 7px;">Question 31 of 50 · JAMB 2019</div>
+                <div style="height: 8px; border-radius: 5px; background: #E4F4EC;">
+                  <div style="width: 62%; height: 100%; border-radius: 5px; background: #12B76A;"></div>
+                </div>
+              </div>
+              <div style="background: #0B8A50; border-radius: 13px;">
+                <div style="background: #12B76A; border-radius: 13px; padding: 9px 14px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #fff; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Resume</div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 13px; background: #fff; border-radius: 16px; padding: 14px;">
+              <div style="width: 46px; height: 46px; border-radius: 14px; background: #F0562E; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 800; color: #fff;">ENG</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 15px; font-weight: 800; color: #1B1730;">English · Comprehension</div>
+                <div style="font-size: 12px; font-weight: 700; color: #6B6480; margin-bottom: 7px;">Question 8 of 60 · NECO 2021</div>
+                <div style="height: 8px; border-radius: 5px; background: #FBE7E1;">
+                  <div style="width: 13%; height: 100%; border-radius: 5px; background: #F0562E;"></div>
+                </div>
+              </div>
+              <div style="background: #C13A16; border-radius: 13px;">
+                <div style="background: #F0562E; border-radius: 13px; padding: 9px 14px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #fff; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Resume</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="position: sticky; bottom: 0; height: 72px; background: #fff; border-top: 2px solid #EDE9F7; display: flex; align-items: center; padding: 0 8px; font-family: Nunito, sans-serif;">
+          <div style="flex: 1; text-align: center;">
+            <div style="width: 34px; height: 5px; border-radius: 3px; background: #5B3DF5; margin: 0 auto 8px;"></div>
+            <div style="font-size: 12px; font-weight: 800; color: #5B3DF5;">Home</div>
+          </div>
+          <div style="flex: 1; text-align: center;">
+            <div style="width: 34px; height: 5px; border-radius: 3px; background: transparent; margin: 0 auto 8px;"></div>
+            <div style="font-size: 12px; font-weight: 700; color: #9C93BE;">Practice</div>
+          </div>
+          <div style="flex: 1; text-align: center;">
+            <div style="width: 34px; height: 5px; border-radius: 3px; background: transparent; margin: 0 auto 8px;"></div>
+            <div style="font-size: 12px; font-weight: 700; color: #9C93BE;">Review</div>
+          </div>
+          <div style="flex: 1; text-align: center;">
+            <div style="width: 34px; height: 5px; border-radius: 3px; background: transparent; margin: 0 auto 8px;"></div>
+            <div style="font-size: 12px; font-weight: 700; color: #9C93BE;">Mastery</div>
+          </div>
+          <div style="flex: 1; text-align: center;">
+            <div style="width: 34px; height: 5px; border-radius: 3px; background: transparent; margin: 0 auto 8px;"></div>
+            <div style="font-size: 12px; font-weight: 700; color: #9C93BE;">Me</div>
+          </div>
+        </div>
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ── 1b Question screen ─────────────────────────────────── -->
+    <div id="1b" style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 15px; color: #fff; background: #5B3DF5; border-radius: 8px; padding: 3px 10px;">1b</div>
+        <div style="font-family: Nunito; font-weight: 700; font-size: 15px; color: #1B1730;">Question · unanswered</div>
+      </div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+        <div style="background: #FBF7F0; min-height: 100%; display: flex; flex-direction: column; font-family: Nunito, sans-serif;"><div style="flex: 1; padding: 6px 18px 24px; box-sizing: border-box;">
+
+          <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0 16px;">
+            <div style="width: 40px; height: 40px; border-radius: 13px; background: #EDE9F7; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 20px; font-weight: 800; color: #1B1730;">‹</div>
+            <div style="flex: 1;">
+              <div style="font-size: 15px; font-weight: 800; color: #1B1730;">Physics Mock</div>
+              <div style="font-size: 12px; font-weight: 700; color: #6B6480;">JAMB 2015 · 40 questions</div>
+            </div>
+            <sc-if value="{{ showTimer }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; align-items: center; gap: 7px; background: #1B1730; border-radius: 13px; padding: 9px 13px;">
+                <div style="width: 8px; height: 8px; border-radius: 50%; background: #C6F135;"></div>
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #fff; letter-spacing: 0.5px;">24:38</div>
+              </div>
+            </sc-if>
+            <div style="width: 40px; height: 40px; border-radius: 13px; background: #EDE9F7; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #6B6480;">☆</div>
+          </div>
+
+          <div style="background: #fff; border-radius: 18px; padding: 14px; margin-bottom: 16px;">
+            <div style="display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px;">
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #5B3DF5; color: #fff; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">1</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #5B3DF5; color: #fff; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">2</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #5B3DF5; color: #fff; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">3</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #FFB020; color: #3B2400; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">4</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #5B3DF5; color: #fff; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">5</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #5B3DF5; color: #fff; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">6</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #FFB020; color: #3B2400; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">7</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #1B1730; color: #C6F135; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">8</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #EDE9F7; color: #9C93BE; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">9</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #EDE9F7; color: #9C93BE; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">10</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #EDE9F7; color: #9C93BE; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">11</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #EDE9F7; color: #9C93BE; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center;">12</div>
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #EDE9F7; color: #9C93BE; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center;">···</div>
+            </div>
+            <div style="display: flex; gap: 14px; border-top: 2px solid #F3F0FA; padding-top: 11px;">
+              <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 4px; background: #5B3DF5;"></div><div style="font-size: 11px; font-weight: 800; color: #6B6480;">Answered</div></div>
+              <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 4px; background: #FFB020;"></div><div style="font-size: 11px; font-weight: 800; color: #6B6480;">Flagged</div></div>
+              <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 4px; background: #1B1730;"></div><div style="font-size: 11px; font-weight: 800; color: #6B6480;">Now</div></div>
+              <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; border-radius: 4px; background: #EDE9F7;"></div><div style="font-size: 11px; font-weight: 800; color: #6B6480;">Left</div></div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <div style="font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 800; color: #5B3DF5;">QUESTION 8 OF 40</div>
+            <div style="background: #FBE7E1; border-radius: 8px; padding: 3px 9px; font-size: 11px; font-weight: 800; color: #C13A16;">HARD · 15 XP</div>
+          </div>
+
+          <div style="font-family: Nunito, sans-serif; font-size: 20px; font-weight: 700; line-height: 1.45; color: #1B1730; text-wrap: pretty; margin-bottom: 14px;">A body of mass 5 kg moving with a velocity of 12 m s<span style="font-size: 14px; vertical-align: super;">−1</span> is brought to rest in 4 s. Calculate the magnitude of the average retarding force.</div>
+
+          <div style="background: #EFEBFF; border-radius: 16px; padding: 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 14px;">
+            <div style="font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 700; color: #3A20D6;">F = m<span style="font-style: italic;">Δv</span> / <span style="font-style: italic;">Δt</span></div>
+            <div style="flex: 1; font-size: 12px; font-weight: 700; color: #6B6480;">Formula sheet is available in the pause menu.</div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="background: #DCD5F5; border-radius: 18px;">
+              <div style="background: #fff; border: 2px solid #DCD5F5; border-radius: 18px; padding: 16px; display: flex; align-items: center; gap: 14px; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">
+                <div style="width: 38px; height: 38px; border-radius: 12px; background: #EDE9F7; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #5041A8;">A</div>
+                <div style="font-size: 18px; font-weight: 700; color: #1B1730;">6.0 N</div>
+              </div>
+            </div>
+            <div style="background: #DCD5F5; border-radius: 18px;">
+              <div style="background: #fff; border: 2px solid #DCD5F5; border-radius: 18px; padding: 16px; display: flex; align-items: center; gap: 14px; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">
+                <div style="width: 38px; height: 38px; border-radius: 12px; background: #EDE9F7; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #5041A8;">B</div>
+                <div style="font-size: 18px; font-weight: 700; color: #1B1730;">10.0 N</div>
+              </div>
+            </div>
+            <div style="background: #DCD5F5; border-radius: 18px;">
+              <div style="background: #fff; border: 2px solid #DCD5F5; border-radius: 18px; padding: 16px; display: flex; align-items: center; gap: 14px; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">
+                <div style="width: 38px; height: 38px; border-radius: 12px; background: #EDE9F7; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #5041A8;">C</div>
+                <div style="font-size: 18px; font-weight: 700; color: #1B1730;">15.0 N</div>
+              </div>
+            </div>
+            <div style="background: #DCD5F5; border-radius: 18px;">
+              <div style="background: #fff; border: 2px solid #DCD5F5; border-radius: 18px; padding: 16px; display: flex; align-items: center; gap: 14px; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">
+                <div style="width: 38px; height: 38px; border-radius: 12px; background: #EDE9F7; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #5041A8;">D</div>
+                <div style="font-size: 18px; font-weight: 700; color: #1B1730;">60.0 N</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="position: sticky; bottom: 0; background: #FBF7F0; border-top: 2px solid #EDE9F7; padding: 14px 18px 16px; display: flex; gap: 12px; font-family: Nunito, sans-serif;">
+          <div style="background: #DCD5F5; border-radius: 16px; flex: 1;">
+            <div style="background: #EDE9F7; border-radius: 16px; padding: 15px; text-align: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #5041A8; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Previous</div>
+          </div>
+          <div style="background: #3A20D6; border-radius: 16px; flex: 1.6;">
+            <div style="background: #5B3DF5; border-radius: 16px; padding: 15px; text-align: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #fff; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Next question</div>
+          </div>
+        </div>
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ── 1c Answer revealed ─────────────────────────────────── -->
+    <div id="1c" style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 15px; color: #fff; background: #5B3DF5; border-radius: 8px; padding: 3px 10px;">1c</div>
+        <div style="font-family: Nunito; font-weight: 700; font-size: 15px; color: #1B1730;">Answer revealed · wrong pick</div>
+      </div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" hint-size="412px,892px">
+        <div style="background: #FBF7F0; min-height: 100%; display: flex; flex-direction: column; font-family: Nunito, sans-serif;"><div style="flex: 1; padding: 6px 18px 24px; box-sizing: border-box;">
+
+          <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0 16px;">
+            <div style="width: 40px; height: 40px; border-radius: 13px; background: #EDE9F7; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 20px; font-weight: 800; color: #1B1730;">‹</div>
+            <div style="flex: 1;">
+              <div style="font-size: 15px; font-weight: 800; color: #1B1730;">Physics Mock</div>
+              <div style="font-size: 12px; font-weight: 700; color: #6B6480;">JAMB 2015 · 40 questions</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 7px; background: #1B1730; border-radius: 13px; padding: 9px 13px;">
+              <div style="width: 8px; height: 8px; border-radius: 50%; background: #C6F135;"></div>
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #fff; letter-spacing: 0.5px;">24:12</div>
+            </div>
+            <div style="width: 40px; height: 40px; border-radius: 13px; background: #FFE9C2; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #B36F00;">★</div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <div style="font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 800; color: #5B3DF5;">QUESTION 8 OF 40</div>
+            <div style="background: #FBE7E1; border-radius: 8px; padding: 3px 9px; font-size: 11px; font-weight: 800; color: #C13A16;">HARD · 15 XP</div>
+          </div>
+
+          <div style="font-size: 18px; font-weight: 700; line-height: 1.45; color: #1B1730; margin-bottom: 16px;">A body of mass 5 kg moving with a velocity of 12 m s<span style="font-size: 13px; vertical-align: super;">−1</span> is brought to rest in 4 s. Calculate the magnitude of the average retarding force.</div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px;">
+            <div style="background: #EDE9F7; border-radius: 18px; padding: 15px; display: flex; align-items: center; gap: 14px; opacity: 0.55;">
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #DCD5F5; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #5041A8;">A</div>
+              <div style="font-size: 17px; font-weight: 700; color: #4A4363;">6.0 N</div>
+            </div>
+            <div style="background: #FBE7E1; border: 3px solid #F0562E; border-radius: 18px; padding: 14px; display: flex; align-items: center; gap: 14px;">
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #F0562E; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #fff;">B</div>
+              <div style="flex: 1; font-size: 17px; font-weight: 800; color: #8C2A0C;">10.0 N</div>
+              <div style="font-size: 12px; font-weight: 800; color: #C13A16;">Your pick</div>
+            </div>
+            <div style="background: #E7F8EF; border: 3px solid #12B76A; border-radius: 18px; padding: 14px; display: flex; align-items: center; gap: 14px;">
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #12B76A; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #fff;">C</div>
+              <div style="flex: 1; font-size: 17px; font-weight: 800; color: #08633A;">15.0 N</div>
+              <div style="font-size: 12px; font-weight: 800; color: #0B8A50;">Correct</div>
+            </div>
+            <div style="background: #EDE9F7; border-radius: 18px; padding: 15px; display: flex; align-items: center; gap: 14px; opacity: 0.55;">
+              <div style="width: 34px; height: 34px; border-radius: 11px; background: #DCD5F5; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 800; color: #5041A8;">D</div>
+              <div style="font-size: 17px; font-weight: 700; color: #4A4363;">60.0 N</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="position: sticky; bottom: 0; background: #1B1730; border-radius: 26px 26px 0 0; padding: 20px 18px 18px; font-family: Nunito, sans-serif;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div style="font-family: 'Baloo 2', sans-serif; font-size: 21px; font-weight: 800; color: #fff;">Not this time — here's why</div>
+            <div style="background: #2E2748; border-radius: 12px; padding: 7px 12px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #C6F135;">+{{ xpEarned }} XP</div>
+          </div>
+          <div style="font-size: 15px; font-weight: 600; line-height: 1.5; color: #CFC8E6; margin-bottom: 8px;">Retarding force is the rate of change of momentum: F = m(v − u)/t = 5(0 − 12)/4 = −15 N, so the magnitude is <span style="font-weight: 800; color: #fff;">15.0 N</span>. Option B comes from dividing by 6 s instead of 4 s.</div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+            <div style="background: #2E2748; border-radius: 10px; padding: 5px 10px; font-size: 11px; font-weight: 800; color: #9C93BE;">TOPIC · NEWTON'S LAWS</div>
+            <div style="background: #2E2748; border-radius: 10px; padding: 5px 10px; font-size: 11px; font-weight: 800; color: #9C93BE;">ADDED TO REVIEW · 2 DAYS</div>
+          </div>
+          <div style="background: #8CC70A; border-radius: 17px;">
+            <div style="background: #C6F135; border-radius: 17px; padding: 15px; text-align: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #1B1730; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Next question</div>
+          </div>
+        </div>
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ── 1d Dark mode dashboard ─────────────────────────────── -->
+    <div id="1d" style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 15px; color: #fff; background: #1B1730; border-radius: 8px; padding: 3px 10px;">1d</div>
+        <div style="font-family: Nunito; font-weight: 700; font-size: 15px; color: #1B1730;">Dark mode · late-night study</div>
+      </div>
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" hint-size="412px,892px">
+        <div style="background: #14121F; min-height: 100%; display: flex; flex-direction: column; font-family: Nunito, sans-serif;"><div style="flex: 1; padding: 8px 18px 24px; box-sizing: border-box;">
+
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0 18px;">
+            <div>
+              <div style="font-size: 14px; font-weight: 700; color: #9C93BE;">11:40 pm · still up</div>
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 27px; font-weight: 800; color: #F5F2FF; line-height: 1.1;">Chidera</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 7px; background: #3B2A05; border-radius: 14px; padding: 8px 13px 8px 10px;">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background: #FFB020; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 13px; font-weight: 800; color: #3B2400;">12</div>
+                <div style="font-size: 13px; font-weight: 800; color: #FFC960;">day streak</div>
+              </div>
+              <div style="width: 44px; height: 44px; border-radius: 15px; background: #12B76A; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 18px; font-weight: 800; color: #06301C;">C</div>
+            </div>
+          </div>
+
+          <div style="background: #6B4CFF; border-radius: 20px; padding: 20px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 14px;">
+              <div>
+                <div style="font-size: 13px; font-weight: 800; color: #D6CBFF; letter-spacing: 1.2px; text-transform: uppercase;">Level 7</div>
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 26px; font-weight: 800; color: #fff; line-height: 1.15;">Scholar</div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 800; color: #fff;">1,240</div>
+                <div style="font-size: 12px; font-weight: 700; color: #D6CBFF;">/ 2,000 XP</div>
+              </div>
+            </div>
+            <div style="height: 16px; border-radius: 10px; background: #4227D8; padding: 3px; box-sizing: border-box;">
+              <div style="width: 62%; height: 100%; border-radius: 8px; background: #C6F135;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+              <div style="font-size: 13px; font-weight: 700; color: #EDE7FF;">760 XP to Level 8</div>
+              <div style="font-size: 13px; font-weight: 700; color: #D6CBFF;">2 streak freezes left</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; background: #201C33; border-radius: 16px; padding: 14px 16px; margin-bottom: 14px;">
+            <div style="font-family: 'Baloo 2', sans-serif; font-size: 24px; font-weight: 800; color: #C6F135; line-height: 1;">63</div>
+            <div style="flex: 1;">
+              <div style="font-size: 14px; font-weight: 800; color: #F5F2FF;">days to JAMB 2026</div>
+              <div style="font-size: 12px; font-weight: 700; color: #9C93BE;">Tue 14 April · 4 subjects registered</div>
+            </div>
+            <div style="font-size: 13px; font-weight: 800; color: #C6F135;">Plan</div>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-bottom: 14px;">
+            <div style="flex: 1; background: #0E3826; border-radius: 16px; padding: 15px;">
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 28px; font-weight: 800; color: #4BE3A0; line-height: 1;">68<span style="font-size: 17px;">%</span></div>
+              <div style="font-size: 13px; font-weight: 800; color: #8FE7C0; margin-top: 4px;">Accuracy</div>
+              <div style="font-size: 11px; font-weight: 700; color: #5FA383;">up 5% this week</div>
+            </div>
+            <div style="flex: 1; background: #241D46; border-radius: 16px; padding: 15px;">
+              <div style="font-family: 'Baloo 2', sans-serif; font-size: 28px; font-weight: 800; color: #B7A4FF; line-height: 1;">2,417</div>
+              <div style="font-size: 13px; font-weight: 800; color: #CBBEFF; margin-top: 4px;">Questions done</div>
+              <div style="font-size: 11px; font-weight: 700; color: #8B7FD0;">184 this week</div>
+            </div>
+          </div>
+
+          <div style="background: #FFB020; border-radius: 20px; padding: 18px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <div style="font-size: 12px; font-weight: 800; color: #7A4E00; letter-spacing: 1.2px; text-transform: uppercase;">Daily challenge</div>
+                <div style="font-family: 'Baloo 2', sans-serif; font-size: 21px; font-weight: 800; color: #3B2400; line-height: 1.2; margin-top: 2px;">15 mixed questions</div>
+                <div style="font-size: 13px; font-weight: 800; color: #7A4E00; margin-top: 3px;">Double XP · ends in 5h 12m</div>
+              </div>
+              <div style="width: 58px; height: 58px; border-radius: 18px; background: #FFD98A; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 19px; font-weight: 800; color: #7A4E00;">2×</div>
+            </div>
+            <div style="background: #B36F00; border-radius: 17px; margin-top: 16px;">
+              <div style="background: #14121F; border-radius: 17px; padding: 14px; text-align: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #fff; letter-spacing: 0.4px; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Start challenge</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 13px; background: #0B2F3D; border-radius: 16px; padding: 14px 16px; margin-bottom: 22px;">
+            <div style="width: 42px; height: 42px; border-radius: 13px; background: #29A7D6; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 17px; font-weight: 800; color: #04303F;">24</div>
+            <div style="flex: 1;">
+              <div style="font-size: 15px; font-weight: 800; color: #CFEEFA;">Review queue due</div>
+              <div style="font-size: 12px; font-weight: 700; color: #79ADC2;">Questions you missed, spaced out</div>
+            </div>
+            <div style="background: #12657F; border-radius: 13px;">
+              <div style="background: #29A7D6; border-radius: 13px; padding: 9px 15px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #04303F; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Review</div>
+            </div>
+          </div>
+
+          <div style="font-family: 'Baloo 2', sans-serif; font-size: 19px; font-weight: 800; color: #F5F2FF; margin-bottom: 12px;">Continue where you stopped</div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 13px; background: #201C33; border-radius: 16px; padding: 14px;">
+              <div style="width: 46px; height: 46px; border-radius: 14px; background: #6B4CFF; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 800; color: #fff;">PHY</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 15px; font-weight: 800; color: #F5F2FF;">Physics · Waves</div>
+                <div style="font-size: 12px; font-weight: 700; color: #9C93BE; margin-bottom: 7px;">Question 14 of 40 · WAEC 2015</div>
+                <div style="height: 8px; border-radius: 5px; background: #302A4D;">
+                  <div style="width: 35%; height: 100%; border-radius: 5px; background: #6B4CFF;"></div>
+                </div>
+              </div>
+              <div style="background: #4227D8; border-radius: 13px;">
+                <div style="background: #6B4CFF; border-radius: 13px; padding: 9px 14px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #fff; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Resume</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 13px; background: #201C33; border-radius: 16px; padding: 14px;">
+              <div style="width: 46px; height: 46px; border-radius: 14px; background: #12B76A; display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 800; color: #06301C;">CHM</div>
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 15px; font-weight: 800; color: #F5F2FF;">Chemistry · Mole concept</div>
+                <div style="font-size: 12px; font-weight: 700; color: #9C93BE; margin-bottom: 7px;">Question 31 of 50 · JAMB 2019</div>
+                <div style="height: 8px; border-radius: 5px; background: #302A4D;">
+                  <div style="width: 62%; height: 100%; border-radius: 5px; background: #12B76A;"></div>
+                </div>
+              </div>
+              <div style="background: #0B8A50; border-radius: 13px;">
+                <div style="background: #12B76A; border-radius: 13px; padding: 9px 14px; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 800; color: #06301C; transform: translateY(-4px); cursor: pointer;" style-active="transform: translateY(0)">Resume</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="position: sticky; bottom: 0; height: 72px; background: #1B1730; border-top: 2px solid #2E2748; display: flex; align-items: center; padding: 0 8px; font-family: Nunito, sans-serif;">
+          <div style="flex: 1; text-align: center;">
+            <div style="width: 34px; height: 5px; border-radius: 3px; background: #C6F135; margin: 0 auto 8px;"></div>
+            <div style="font-size: 12px; font-weight: 800; color: #C6F135;">Home</div>
+          </div>
+          <div style="flex: 1; text-align: center;">
+            <div style="width: 34px; height: 5px; border-radius: 3px; background: transparent; margin: 0 auto 8px;"></div>
+            <div style="font-size: 12px; font-weight: 700; color: #9C93BE;">Practice</div>
+          </div>
+          <div style="flex: 1; text-align: center;">
+            <div style="width: 34px; height: 5px; border-radius: 3px; background: transparent; margin: 0 auto 8px;"></div>
+            <div style="font-size: 12px; font-weight: 700; color: #9C93BE;">Review</div>
+          </div>
+          <div style="flex: 1; text-align: center;">
+            <div style="width: 34px; height: 5px; border-radius: 3px; background: transparent; margin: 0 auto 8px;"></div>
+            <div style="font-size: 12px; font-weight: 700; color: #9C93BE;">Mastery</div>
+          </div>
+          <div style="flex: 1; text-align: center;">
+            <div style="width: 34px; height: 5px; border-radius: 3px; background: transparent; margin: 0 auto 8px;"></div>
+            <div style="font-size: 12px; font-weight: 700; color: #9C93BE;">Me</div>
+          </div>
+        </div>
+        </div>
+      </x-import>
+    </div>
+
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;showExamCountdown&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Dashboard&quot; },
+  &quot;showTimer&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Exam mode&quot; },
+  &quot;xpEarned&quot;: { &quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 4, &quot;min&quot;: 0, &quot;max&quot;: 30, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Exam mode&quot; }
+}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showExamCountdown: this.props.showExamCountdown ?? true,
+      showTimer: this.props.showTimer ?? true,
+      xpEarned: this.props.xpEarned ?? 4,
+    };
+  }
+}
+</script>
+</body>
+</html>

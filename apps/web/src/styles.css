@@ -1,5 +1,20 @@
-
 @import "tailwindcss";
+
+/* Sticker style — see docs/design/README.md */
+@theme {
+  --color-ink: #16130f;
+  --color-cream: #fdfaf2;
+  --color-paper: #ffffff;
+  --color-lime: #d6f84a;
+  --color-lavender: #c7b2f5;
+  --color-lavender-soft: #e6dbfc;
+  --color-muted: #6b6157;
+  --color-faint: #8a8177;
+  --color-on-dark-muted: #a79e92;
+
+  --font-display: "Baloo 2", Nunito, system-ui, sans-serif;
+  --font-sans: Nunito, system-ui, sans-serif;
+}
 
 * {
   box-sizing: border-box;
@@ -13,5 +28,14 @@ body,
 
 body {
   margin: 0;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-weight: 600;
 }
 
+/* Highlighter block for key words. */
+.hl {
+  background: var(--color-lime);
+  padding: 0 3px;
+}

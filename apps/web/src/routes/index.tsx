@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
+import { Badge, Button, Card, Chip, Label, OptionRow } from '#/components/ui'
 
 type Health = { database: string; storage: string; claude: string }
 
@@ -19,28 +20,102 @@ export const Route = createFileRoute('/')({
   component: Home,
 })
 
+const checkNames: Record<keyof Health, string> = {
+  database: 'Database',
+  storage: 'Photo storage',
+  claude: 'Claude',
+}
+
 function Home() {
-  const { apiUrl, health, error } = Route.useLoaderData()
+  const { health, error } = Route.useLoaderData()
+  const allOk = health && Object.values(health).every((s) => s.startsWith('ok'))
+
   return (
-    <main className="mx-auto max-w-xl p-6">
-      <h1 className="text-3xl font-bold">Tutor</h1>
-      <p className="mt-2 text-gray-600">Question converter — setup check</p>
-      <h2 className="mt-6 font-semibold">API ({apiUrl})</h2>
-      {error ? (
-        <p className="mt-2 text-red-600">Unreachable: {error}</p>
-      ) : (
-        <ul className="mt-2 space-y-1">
-          {health &&
-            Object.entries(health).map(([name, status]) => (
-              <li key={name}>
-                <span className={status.startsWith('ok') ? 'text-green-700' : 'text-red-600'}>
-                  {status.startsWith('ok') ? '✓' : '✗'}
-                </span>{' '}
-                <strong>{name}</strong>: {status}
-              </li>
-            ))}
-        </ul>
-      )}
+    <main className="mx-auto flex max-w-xl flex-col gap-4 px-4 pt-6 pb-12">
+      <header className="pb-2">
+        <Label>Tutor</Label>
+        <h1 className="font-display text-[30px] leading-tight font-extrabold">
+          Question <span className="hl">converter</span>
+        </h1>
+        <p className="mt-1 text-sm font-bold text-muted">
+          Snap a page, Claude reads and answers it, you check the unsure ones.
+        </p>
+      </header>
+
+      <Card fill={allOk ? 'lime' : 'lavender'}>
+        <div className="mb-3 flex items-end justify-between">
+          <div>
+            <Label>Setup check</Label>
+            <div className="font-display text-2xl leading-tight font-extrabold">
+              {error ? 'API unreachable' : allOk ? 'All systems go' : 'Something needs attention'}
+            </div>
+          </div>
+        </div>
+        {error ? (
+          <p className="rounded-[16px] border-[2.5px] border-ink bg-cream p-3 text-sm font-bold">
+            {error}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2.5">
+            {health &&
+              (Object.keys(checkNames) as (keyof Health)[]).map((key) => {
+                const ok = health[key].startsWith('ok')
+                return (
+                  <li
+                    key={key}
+                    className="flex items-center gap-3 rounded-[16px] border-[2.5px] border-ink bg-paper p-3"
+                  >
+                    <div
+                      className={`flex size-9 shrink-0 items-center justify-center rounded-[11px] font-display text-lg font-extrabold ${
+                        ok ? 'bg-ink text-lime' : 'border-[2.5px] border-ink bg-cream'
+                      }`}
+                    >
+                      {ok ? '✓' : '!'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[15px] font-extrabold">{checkNames[key]}</div>
+                      <div className="truncate text-xs font-bold text-muted">{health[key]}</div>
+                    </div>
+                  </li>
+                )
+              })}
+          </ul>
+        )}
+      </Card>
+
+      <h2 className="mt-4 font-display text-[21px] font-extrabold">
+        Coming next: <span className="hl">review</span> cards
+      </h2>
+      <p className="-mt-3 text-sm font-bold text-muted">A sample of how flagged questions will look.</p>
+
+      <Card>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Badge>Biology · Page 5 · Q8</Badge>
+          <Chip fill="lavender-soft">Medium confidence</Chip>
+        </div>
+        <div className="mb-1 text-xs font-extrabold uppercase tracking-[1.2px] text-muted">
+          Levels of organization
+        </div>
+        <p className="mb-4 text-[19px] leading-snug font-bold">
+          What level of organization is <span className="hl">Spirogyra</span>?
+        </p>
+        <div className="flex flex-col gap-2.5">
+          <OptionRow label="A" state="dimmed">Organ system</OptionRow>
+          <OptionRow label="B" state="dimmed">Organ</OptionRow>
+          <OptionRow label="C" state="correct">Cell</OptionRow>
+          <OptionRow label="D" state="dimmed">Tissue</OptionRow>
+        </div>
+        <div className="mt-4 rounded-[16px] border-[2.5px] border-ink bg-cream p-3 text-[15px] leading-relaxed">
+          Spirogyra is a filament of identical cells that each carry out all life processes
+          independently, so it works at the cellular level.
+        </div>
+        <div className="mt-4 flex gap-3">
+          <Button fill="paper" className="flex-1">
+            Change
+          </Button>
+          <Button className="flex-[1.6]">Looks right ✓</Button>
+        </div>
+      </Card>
     </main>
   )
 }
