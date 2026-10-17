@@ -1,8 +1,13 @@
-//! Tutor API. For now: health checks proving the database, photo storage and
-//! Claude are wired up, plus the subject list and the OpenAPI document the
-//! TypeScript client is generated from.
+//! Tutor API: the question converter. Photos uploaded through the website are
+//! read by Claude, answered by gpt-6.1-sol and gpt-6-luna, and their diagrams
+//! redrawn by gpt-6.1-sol (see `worker`); the routes in `routes` serve the
+//! upload and review website.
 //!
 //! `tutor-api openapi` prints the OpenAPI document and exits.
+
+mod prompts;
+mod routes;
+mod worker;
 
 use std::sync::Arc;
 
@@ -17,21 +22,22 @@ use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tutor_claude::Claude;
+use tutor_openai::OpenAi;
 use tutor_storage::Storage;
 use utoipa::{OpenApi, ToSchema};
 
-#[derive(OpenApi)]
-#[openapi(info(title = "Tutor API"), paths(health, list_subjects))]
-struct ApiDoc;
-
 #[derive(Clone)]
-struct AppState {
+pub struct AppState {
     db: PgPool,
+    storage: Storage,
+    claude: Arc<Claude>,
+    /// None when OPENAI_API_KEY is missing; pages then fail with that message.
+    openai: Option<OpenAi>,
     /// Outcome of the startup checks that are too slow or costly to run per request.
     checks: Arc<RwLock<StartupChecks>>,
 }
 
-#[derive(Clone, Serialize, ToSchema)]
+#[derive(Clone)]
 struct StartupChecks {
     storage: String,
     claude: String,
@@ -40,7 +46,7 @@ struct StartupChecks {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     if std::env::args().nth(1).as_deref() == Some("openapi") {
-        println!("{}", ApiDoc::openapi().to_pretty_json()?);
+        println!("{}", routes::ApiDoc::openapi().to_pretty_json()?);
         return Ok(());
     }
 
@@ -56,25 +62,44 @@ async fn main() -> anyhow::Result<()> {
     let db = tutor_db::connect(&database_url).await?;
     tutor_db::MIGRATOR.run(&db).await?;
 
-    let storage = Storage::from_env()?;
-    let checks = Arc::new(RwLock::new(StartupChecks {
-        storage: "pending".into(),
-        claude: "pending".into(),
-    }));
-    tokio::spawn(run_startup_checks(storage.clone(), checks.clone()));
+    let openai = match OpenAi::from_env() {
+        Ok(client) => Some(client),
+        Err(e) => {
+            tracing::error!("{e:#}; questions can't be answered until it is set");
+            None
+        }
+    };
+    let state = AppState {
+        db,
+        storage: Storage::from_env()?,
+        claude: Arc::new(Claude::from_env()),
+        openai,
+        checks: Arc::new(RwLock::new(StartupChecks {
+            storage: "pending".into(),
+            claude: "pending".into(),
+        })),
+    };
+    tokio::spawn(run_startup_checks(state.clone()));
+    worker::spawn(state.clone());
 
     let cors = match std::env::var("WEB_ORIGIN") {
-        Ok(origin) => CorsLayer::new().allow_origin([origin.parse()?]),
+        Ok(origin) => CorsLayer::new()
+            .allow_origin([origin.parse()?])
+            .allow_methods(tower_http::cors::Any)
+            .allow_headers(tower_http::cors::Any),
         Err(_) => CorsLayer::permissive(),
     };
 
     let app = Router::new()
         .route("/health", get(health))
-        .route("/subjects", get(list_subjects))
-        .route("/openapi.json", get(|| async { Json(ApiDoc::openapi()) }))
+        .route(
+            "/openapi.json",
+            get(|| async { Json(routes::ApiDoc::openapi()) }),
+        )
+        .merge(routes::router())
         .layer(cors)
         .layer(TraceLayer::new_for_http())
-        .with_state(AppState { db, checks });
+        .with_state(state);
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "8080".into());
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
@@ -89,7 +114,8 @@ async fn main() -> anyhow::Result<()> {
 
 /// Round-trips a small object through storage and asks Claude for a one-word
 /// JSON reply, so a deploy shows at once whether R2 and the subscription token work.
-async fn run_startup_checks(storage: Storage, checks: Arc<RwLock<StartupChecks>>) {
+async fn run_startup_checks(state: AppState) {
+    let storage = &state.storage;
     let key = "healthcheck/startup.txt";
     let storage_result = async {
         storage.put(key, "ok".into()).await?;
@@ -102,15 +128,15 @@ async fn run_startup_checks(storage: Storage, checks: Arc<RwLock<StartupChecks>>
         Ok(()) => format!("ok ({})", storage.backend),
         Err(e) => format!("error ({}): {e:#}", storage.backend),
     };
-    checks.write().await.storage = storage_status;
+    state.checks.write().await.storage = storage_status;
 
-    let claude = Claude::from_env();
     let schema = json!({
         "type": "object",
         "additionalProperties": false,
         "required": ["ok"],
         "properties": { "ok": { "type": "boolean" } }
     });
+    let claude = &state.claude;
     let claude_status = match claude.version().await {
         Err(e) => format!("error: {e:#}"),
         Ok(version) => match claude
@@ -129,14 +155,15 @@ async fn run_startup_checks(storage: Storage, checks: Arc<RwLock<StartupChecks>>
         },
     };
     tracing::info!(%claude_status, "claude startup check");
-    checks.write().await.claude = claude_status;
+    state.checks.write().await.claude = claude_status;
 }
 
 #[derive(Serialize, ToSchema)]
-struct Health {
+pub struct Health {
     database: String,
     storage: String,
     claude: String,
+    openai: String,
 }
 
 /// Database is checked live; storage and Claude report their startup checks.
@@ -147,6 +174,11 @@ async fn health(State(state): State<AppState>) -> (StatusCode, Json<Health>) {
         Err(e) => format!("error: {e}"),
     };
     let checks = state.checks.read().await.clone();
+    let openai = if state.openai.is_some() {
+        "ok (key set)"
+    } else {
+        "error: OPENAI_API_KEY is not set"
+    };
     let status = if database == "ok" {
         StatusCode::OK
     } else {
@@ -158,24 +190,7 @@ async fn health(State(state): State<AppState>) -> (StatusCode, Json<Health>) {
             database,
             storage: checks.storage,
             claude: checks.claude,
+            openai: openai.into(),
         }),
     )
-}
-
-#[derive(Serialize, ToSchema, sqlx::FromRow)]
-struct Subject {
-    id: uuid::Uuid,
-    name: String,
-}
-
-#[utoipa::path(get, path = "/subjects", responses((status = 200, body = Vec<Subject>)))]
-async fn list_subjects(State(state): State<AppState>) -> Result<Json<Vec<Subject>>, StatusCode> {
-    sqlx::query_as::<_, Subject>("select id, name from subjects order by name")
-        .fetch_all(&state.db)
-        .await
-        .map(Json)
-        .map_err(|e| {
-            tracing::error!("listing subjects: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR
-        })
 }

@@ -30,13 +30,22 @@ UI style: `docs/design/README.md`.
 - [x] Sticker UI style and components
 - [x] Migration 0002: second opinion, diagram review, page fragments, queue state, AI usage log
 - [x] `crates/openai`: answering (Sol + Luna) and diagram drawing
-- [ ] Worker: page queue → Claude extraction → answers → flags → diagram queue; pause on usage limit; split-question joining
-- [ ] API routes: upload, pages, review, questions, diagrams, queue control + OpenAPI
+- [x] Worker: page queue → Claude extraction → answers → flags → diagram queue; pause on usage limit; split-question joining
+- [x] API routes: upload, pages, review, questions, diagrams, queue control + OpenAPI
 - [ ] `packages/api-client` generated from OpenAPI
 - [ ] Web: `/` upload, `/uploads`, `/uploads/:pageId`
 - [ ] Web: `/review`, `/review/:questionId`
 - [ ] Web: `/questions`, `/questions/:questionId`
 - [ ] Deploy and test end to end with the two sample pages
+
+## Notes from testing (two Biology sample pages, 51 questions)
+
+- Answers are matched to questions by an `[n]` item tag, never by printed number:
+  books misprint numbers (page 4 prints the arthropod question as a second "4"),
+  and models sometimes reply "Question 2" instead of "2".
+- A number repeated on one page is saved as "4 (2nd)" so it isn't dropped as a duplicate.
+- Local end-to-end test: `docker run postgres:18-alpine` on :55432, run the API with
+  `LOCAL_STORAGE_DIR`, upload with `curl -F subject_id=… -F photos=@page.jpg :8091/pages`.
 
 ## Environment (Coolify app `tutor-api`)
 

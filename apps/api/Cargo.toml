@@ -6,7 +6,9 @@ version.workspace = true
 [dependencies]
 anyhow.workspace = true
 axum.workspace = true
+base64 = "0.22"
 bytes = "1"
+chrono.workspace = true
 dotenvy = "0.15.7"
 serde.workspace = true
 sqlx.workspace = true
@@ -19,4 +21,5 @@ utoipa.workspace = true
 uuid.workspace = true
 tutor-claude = { path = "../../crates/claude" }
 tutor-db = { path = "../../crates/db" }
+tutor-openai = { path = "../../crates/openai" }
 tutor-storage = { path = "../../crates/storage" }
