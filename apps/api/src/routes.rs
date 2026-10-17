@@ -37,6 +37,7 @@ const MAX_PHOTO_BYTES: usize = 8 * 1024 * 1024;
         update_question,
         resolve_question,
         delete_question,
+        update_group,
         redraw_diagram,
         accept_diagram,
     )
@@ -71,6 +72,7 @@ pub fn router() -> Router<AppState> {
                 .delete(delete_question),
         )
         .route("/questions/{id}/resolve", post(resolve_question))
+        .route("/groups/{id}", axum::routing::put(update_group))
         .route("/diagrams/{id}/svg", get(diagram_svg))
         .route("/diagrams/{id}/redraw", post(redraw_diagram))
         .route("/diagrams/{id}/accept", post(accept_diagram))
@@ -608,8 +610,8 @@ pub struct QuestionDetail {
     /// gpt-6-luna's pick (an option label) and reasoning.
     second_answer: Option<String>,
     second_explanation: Option<String>,
-    /// Shared instruction, e.g. "Study the diagram and answer questions 31 to 33".
-    instruction: Option<String>,
+    /// The group this question belongs to; its questions are always shown together.
+    group: Option<QuestionGroup>,
     /// The question's own diagram, or the shared one from its group.
     diagram: Option<Diagram>,
     options: Vec<OptionDetail>,
@@ -644,7 +646,7 @@ struct QuestionExtra {
     confidence: Option<String>,
     second_answer: Option<String>,
     second_explanation: Option<String>,
-    instruction: Option<String>,
+    group_id: Option<Uuid>,
     diagram_id: Option<Uuid>,
 }
 
@@ -671,7 +673,7 @@ async fn question_detail(s: &AppState, id: Uuid) -> Result<QuestionDetail, ApiEr
         .fetch_one(&s.db)
         .await?;
     let extra: QuestionExtra = sqlx::query_as(
-        "select q.explanation, q.confidence, q.second_answer, q.second_explanation, g.instruction,
+        "select q.explanation, q.confidence, q.second_answer, q.second_explanation, q.group_id,
                 coalesce(q.diagram_id, g.diagram_id) as diagram_id
          from questions q left join question_groups g on g.id = q.group_id where q.id = $1",
     )
@@ -713,7 +715,7 @@ async fn question_detail(s: &AppState, id: Uuid) -> Result<QuestionDetail, ApiEr
         confidence: extra.confidence,
         second_answer: extra.second_answer,
         second_explanation: extra.second_explanation,
-        instruction: extra.instruction,
+        group: load_group(s, extra.group_id).await?,
         diagram: load_diagram(s, extra.diagram_id).await?,
         options,
         photo_url,
@@ -827,6 +829,80 @@ async fn delete_question(
         .execute(&s.db)
         .await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+// ── Groups ──────────────────────────────────────────────────────────────────
+
+#[derive(Serialize, ToSchema, sqlx::FromRow)]
+pub struct GroupMember {
+    id: Uuid,
+    number: String,
+    needs_check: bool,
+    resolved_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct QuestionGroup {
+    id: Uuid,
+    /// As printed, e.g. "Study it and answer questions 31 to 33" — for reviewers.
+    instruction: Option<String>,
+    /// What students see: the instruction without question numbers. The app numbers
+    /// the group's questions itself, since they are always shown together.
+    display_instruction: Option<String>,
+    /// The group's questions in book order.
+    members: Vec<GroupMember>,
+}
+
+async fn load_group(s: &AppState, id: Option<Uuid>) -> sqlx::Result<Option<QuestionGroup>> {
+    let Some(id) = id else { return Ok(None) };
+    let (instruction, display_instruction): (Option<String>, Option<String>) = sqlx::query_as(
+        "select instruction, display_instruction from question_groups where id = $1",
+    )
+    .bind(id)
+    .fetch_one(&s.db)
+    .await?;
+    let members = sqlx::query_as(
+        "select id, number, needs_check, resolved_at from questions where group_id = $1
+         order by (case when number ~ '^[0-9]+$' then number::int end) nulls last, number",
+    )
+    .bind(id)
+    .fetch_all(&s.db)
+    .await?;
+    Ok(Some(QuestionGroup {
+        id,
+        instruction,
+        display_instruction,
+        members,
+    }))
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct GroupEdit {
+    /// Student-facing instruction; must not mention question numbers.
+    display_instruction: Option<String>,
+}
+
+#[utoipa::path(put, path = "/groups/{id}", request_body = GroupEdit,
+    responses((status = 200, body = QuestionGroup), (status = 404, body = ErrorBody)))]
+async fn update_group(
+    State(s): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(edit): Json<GroupEdit>,
+) -> ApiResult<QuestionGroup> {
+    let n = sqlx::query("update question_groups set display_instruction = $2 where id = $1")
+        .bind(id)
+        .bind(
+            edit.display_instruction
+                .as_deref()
+                .map(str::trim)
+                .filter(|t| !t.is_empty()),
+        )
+        .execute(&s.db)
+        .await?;
+    if n.rows_affected() == 0 {
+        return Err(ApiError(StatusCode::NOT_FOUND, "not found".into()));
+    }
+    Ok(Json(load_group(&s, Some(id)).await?.expect("group exists")))
 }
 
 // ── Diagrams ────────────────────────────────────────────────────────────────

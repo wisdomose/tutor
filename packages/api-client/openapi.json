@@ -77,6 +77,55 @@
         }
       }
     },
+    "/groups/{id}": {
+      "put": {
+        "tags": [],
+        "operationId": "update_group",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroupEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionGroup"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
@@ -706,6 +755,45 @@
           }
         }
       },
+      "GroupEdit": {
+        "type": "object",
+        "properties": {
+          "display_instruction": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Student-facing instruction; must not mention question numbers."
+          }
+        }
+      },
+      "GroupMember": {
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "needs_check"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "needs_check": {
+            "type": "boolean"
+          },
+          "number": {
+            "type": "string"
+          },
+          "resolved_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "Health": {
         "type": "object",
         "required": [
@@ -926,12 +1014,16 @@
                   "null"
                 ]
               },
-              "instruction": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "description": "Shared instruction, e.g. \"Study the diagram and answer questions 31 to 33\"."
+              "group": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/QuestionGroup",
+                    "description": "The group this question belongs to; its questions are always shown together."
+                  }
+                ]
               },
               "next_flagged_id": {
                 "type": [
@@ -1007,6 +1099,40 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "QuestionGroup": {
+        "type": "object",
+        "required": [
+          "id",
+          "members"
+        ],
+        "properties": {
+          "display_instruction": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What students see: the instruction without question numbers. The app numbers\nthe group's questions itself, since they are always shown together."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "instruction": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "As printed, e.g. \"Study it and answer questions 31 to 33\" — for reviewers."
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupMember"
+            },
+            "description": "The group's questions in book order."
           }
         }
       },

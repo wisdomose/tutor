@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PagePhoto } from "./PagePhoto";
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { Diagram, QuestionDetail } from "@tutor/api-client";
+import type { Diagram, QuestionDetail, QuestionGroup } from "@tutor/api-client";
 import { useState } from "react";
 import { api, apiPath, unwrap } from "#/lib/api";
 import { MathText } from "./MathText";
@@ -145,15 +145,16 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 				</div>
 
 				<div className="flex flex-col gap-4">
-					{q.instruction && (
-						<Card fill="lavender-soft">
-							<Label>Shared instruction</Label>
-							<p className="mt-1 text-[15px] font-bold">
-								<MathText text={q.instruction} />
-							</p>
-						</Card>
+					{q.group && (
+						<GroupPanel group={q.group} questionId={q.id} mode={mode} />
 					)}
-					{q.diagram && <DiagramPanel diagram={q.diagram} questionId={q.id} />}
+					{q.diagram && (
+						<DiagramPanel
+							diagram={q.diagram}
+							questionId={q.id}
+							sharedBy={q.group?.members.length}
+						/>
+					)}
 
 					<Field label="Question">
 						<TextArea
@@ -312,15 +313,112 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 	);
 }
 
+/**
+ * A group's questions are always shown together to students, who never see the
+ * printed numbers. Reviewers see the instruction as printed, can correct the
+ * student version, and can jump between the group's questions.
+ */
+function GroupPanel({
+	group,
+	questionId,
+	mode,
+}: {
+	group: QuestionGroup;
+	questionId: string;
+	mode: "review" | "bank";
+}) {
+	const qc = useQueryClient();
+	const [text, setText] = useState(group.display_instruction ?? "");
+	const changed = text.trim() !== (group.display_instruction ?? "");
+	const save = useMutation({
+		mutationFn: () =>
+			unwrap(
+				api.PUT("/groups/{id}", {
+					params: { path: { id: group.id } },
+					body: { display_instruction: text.trim() || null },
+				}),
+			),
+		onSuccess: () => {
+			for (const m of group.members)
+				qc.invalidateQueries({ queryKey: ["question", m.id] });
+		},
+	});
+	const to =
+		mode === "review" ? "/review/$questionId" : "/questions/$questionId";
+
+	return (
+		<Card fill="lavender-soft">
+			<Label>Group · shown together to students</Label>
+			<div className="mt-2 flex flex-wrap gap-1.5">
+				{group.members.map((m) => (
+					<Link
+						key={m.id}
+						to={to}
+						params={{ questionId: m.id }}
+						className={cx(
+							"rounded-[10px] border-2 border-ink px-2 py-0.5 text-xs font-extrabold",
+							m.id === questionId
+								? "bg-ink text-lime"
+								: m.needs_check && !m.resolved_at
+									? "bg-lavender"
+									: "bg-paper",
+						)}
+					>
+						Q{m.number}
+						{m.resolved_at ? " ✓" : ""}
+					</Link>
+				))}
+			</div>
+			{group.instruction && (
+				<div className="mt-3">
+					<div className="text-[11px] font-extrabold tracking-wide text-muted uppercase">
+						As printed
+					</div>
+					<p className="text-[15px] font-bold">
+						<MathText text={group.instruction} />
+					</p>
+				</div>
+			)}
+			<div className="mt-3 flex flex-col gap-2">
+				<Field label="For students (no question numbers)">
+					<TextArea
+						rows={2}
+						value={text}
+						placeholder="e.g. The diagram below is an illustration of a fungus."
+						onChange={(e) => setText(e.target.value)}
+					/>
+				</Field>
+				{changed && (
+					<Button
+						size="sm"
+						className="self-start"
+						disabled={save.isPending}
+						onClick={() => save.mutate()}
+					>
+						Save instruction
+					</Button>
+				)}
+				{save.isSuccess && !changed && (
+					<p className="text-xs font-extrabold">Saved ✓</p>
+				)}
+				{save.error && <ErrorNote error={save.error} />}
+			</div>
+		</Card>
+	);
+}
+
 /** The AI-drawn diagram with Accept / Redraw-with-note controls. */
 function DiagramPanel({
 	diagram,
 	questionId,
 	compact,
+	sharedBy,
 }: {
 	diagram: Diagram;
 	questionId: string;
 	compact?: boolean;
+	/** Number of questions in the group using this diagram. */
+	sharedBy?: number;
 }) {
 	const qc = useQueryClient();
 	const [note, setNote] = useState("");
@@ -356,7 +454,12 @@ function DiagramPanel({
 		<Card fill="paper" className={compact ? "p-2.5" : undefined}>
 			{!compact && (
 				<div className="mb-2 flex items-center gap-2">
-					<Label>Diagram (redrawn by AI — compare with the photo)</Label>
+					<Label>
+						Diagram (redrawn by AI — compare with the photo)
+						{sharedBy && sharedBy > 1
+							? ` · shared by all ${sharedBy} questions in the group`
+							: ""}
+					</Label>
 					{diagram.reviewed_at && <Chip fill="lime">Accepted</Chip>}
 				</div>
 			)}

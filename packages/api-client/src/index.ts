@@ -16,14 +16,21 @@ export type QuestionEdit = Schemas['QuestionEdit']
 export type Diagram = Schemas['Diagram']
 export type OptionDetail = Schemas['OptionDetail']
 export type Health = Schemas['Health']
+export type QuestionGroup = Schemas['QuestionGroup']
 
-export type CheckReason = 'conflicting_answers' | 'has_diagram' | 'low_confidence' | 'no_answer'
+export type CheckReason =
+  | 'conflicting_answers'
+  | 'has_diagram'
+  | 'low_confidence'
+  | 'no_answer'
+  | 'refers_to_number'
 
 export const checkReasonLabels: Record<CheckReason, string> = {
   conflicting_answers: 'Conflicting answers',
   has_diagram: 'Has diagram',
   low_confidence: 'Low confidence',
   no_answer: 'No answer',
+  refers_to_number: 'Refers to a question number',
 }
 
 export function createApiClient(baseUrl: string) {

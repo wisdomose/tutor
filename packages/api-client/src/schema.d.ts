@@ -36,6 +36,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["update_group"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -286,6 +302,18 @@ export interface components {
         ErrorBody: {
             error: string;
         };
+        GroupEdit: {
+            /** @description Student-facing instruction; must not mention question numbers. */
+            display_instruction?: string | null;
+        };
+        GroupMember: {
+            /** Format: uuid */
+            id: string;
+            needs_check: boolean;
+            number: string;
+            /** Format: date-time */
+            resolved_at?: string | null;
+        };
         Health: {
             claude: string;
             database: string;
@@ -343,8 +371,7 @@ export interface components {
             confidence?: string | null;
             diagram?: null | components["schemas"]["Diagram"];
             explanation?: string | null;
-            /** @description Shared instruction, e.g. "Study the diagram and answer questions 31 to 33". */
-            instruction?: string | null;
+            group?: null | components["schemas"]["QuestionGroup"];
             /**
              * Format: uuid
              * @description Next flagged, unresolved question in book order (for "Looks right → next").
@@ -368,6 +395,19 @@ export interface components {
             /** @description Also mark the question as checked. */
             resolve: boolean;
             topic?: string | null;
+        };
+        QuestionGroup: {
+            /**
+             * @description What students see: the instruction without question numbers. The app numbers
+             *     the group's questions itself, since they are always shown together.
+             */
+            display_instruction?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description As printed, e.g. "Study it and answer questions 31 to 33" — for reviewers. */
+            instruction?: string | null;
+            /** @description The group's questions in book order. */
+            members: components["schemas"]["GroupMember"][];
         };
         QuestionList: {
             items: components["schemas"]["QuestionSummary"][];
@@ -484,6 +524,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Diagram"];
+                };
+            };
+        };
+    };
+    update_group: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupEdit"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionGroup"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

@@ -176,6 +176,13 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
     let mut extraction: Extraction = serde_json::from_value(read.output)
         .context("Claude's reading did not match the expected shape")?;
     disambiguate_numbers(&mut extraction.questions);
+    for q in &mut extraction.questions {
+        for o in &mut q.options {
+            if let Some(body) = &mut o.body {
+                *body = tidy_option(body);
+            }
+        }
+    }
 
     // 2. Both models answer every question.
     let diagram_text: HashMap<&str, &str> = extraction
@@ -267,10 +274,12 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
     let mut group_ids = HashMap::new();
     for g in &extraction.groups {
         let id: Uuid = sqlx::query_scalar(
-            "insert into question_groups (page_id, instruction, diagram_id) values ($1, $2, $3) returning id",
+            "insert into question_groups (page_id, instruction, display_instruction, diagram_id)
+             values ($1, $2, $3, $4) returning id",
         )
         .bind(page.id)
         .bind(&g.instruction)
+        .bind(&g.display_instruction)
         .bind(g.diagram_ref.as_deref().and_then(|r| diagram_ids.get(r)))
         .fetch_one(&mut *tx)
         .await?;
@@ -312,6 +321,7 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
                 body: &q.body,
                 options,
                 has_diagram,
+                refers_to_number: q.refers_to_number,
                 sol: sol[i].as_ref(),
                 luna: luna[i].as_ref(),
             },
@@ -411,6 +421,7 @@ struct NewQuestion<'a> {
     body: &'a str,
     options: Vec<NewOption>,
     has_diagram: bool,
+    refers_to_number: bool,
     sol: Option<&'a Answer>,
     luna: Option<&'a Answer>,
 }
@@ -422,7 +433,10 @@ async fn insert_question(
     q: NewQuestion<'_>,
 ) -> anyhow::Result<bool> {
     let labels: Vec<&str> = q.options.iter().map(|o| o.label.as_str()).collect();
-    let verdict = judge(&labels, q.sol, q.luna, q.has_diagram);
+    let mut verdict = judge(&labels, q.sol, q.luna, q.has_diagram);
+    if q.refers_to_number {
+        verdict.reasons.push("refers_to_number");
+    }
 
     let id: Option<Uuid> = sqlx::query_scalar(
         "insert into questions (subject_id, page_id, page_number, group_id, diagram_id, number, topic, body,
@@ -529,6 +543,23 @@ fn disambiguate_numbers(questions: &mut [prompts::ExtractedQuestion]) {
                 format!("{base} ({suffix})")
             };
         }
+    }
+}
+
+/// Inline options are printed "A. fish. B. reptile."; the full stop only separates
+/// them. Drop a single trailing one, but keep "etc.", "2.5", "i.e. x." and the like.
+fn tidy_option(body: &str) -> String {
+    let t = body.trim();
+    match t.strip_suffix('.') {
+        Some(rest)
+            if !rest.is_empty()
+                && !rest.ends_with('.')
+                && !rest.contains('.')
+                && !rest.ends_with("etc") =>
+        {
+            rest.trim_end().to_string()
+        }
+        _ => t.to_string(),
     }
 }
 
@@ -652,6 +683,7 @@ async fn join_split_questions(state: &AppState, page_id: Uuid) -> anyhow::Result
                     })
                     .collect(),
                 has_diagram: false,
+                refers_to_number: false,
                 sol: sol[0].as_ref(),
                 luna: luna[0].as_ref(),
             },
@@ -918,6 +950,7 @@ mod tests {
             body: String::new(),
             group_ref: None,
             diagram_ref: None,
+            refers_to_number: false,
             options: vec![],
         };
         let mut qs = vec![q("4"), q("5"), q("4."), q("4")];
@@ -932,6 +965,17 @@ mod tests {
         assert_eq!(norm_number("Q31."), "31");
         assert_eq!(norm_number("Question 4 (2nd)"), norm_number("4 (2nd)"));
         assert_eq!(norm_number(" 12 "), "12");
+    }
+
+    #[test]
+    fn option_full_stops() {
+        assert_eq!(tidy_option("stolon."), "stolon");
+        assert_eq!(tidy_option("10.0 N"), "10.0 N");
+        assert_eq!(tidy_option("dogs, cats, etc."), "dogs, cats, etc.");
+        assert_eq!(
+            tidy_option("It is an alga. It has a large vacuole."),
+            "It is an alga. It has a large vacuole."
+        );
     }
 
     #[test]

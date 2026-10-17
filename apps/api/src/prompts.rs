@@ -26,7 +26,7 @@ Questions split across pages:
 - A question that is cut off by the photo edge rather than the page edge is also left out.
 
 Diagrams and shared instructions:
-- When several questions share an instruction (\"The diagram below is an illustration of a fungus. Study it and answer questions 31 to 33\"), add a group with that instruction text and set group_ref on each of those questions. Do not repeat the instruction in their bodies.
+- When several questions share an instruction (\"The diagram below is an illustration of a fungus. Study it and answer questions 31 to 33\"), add a group with that instruction text and set group_ref on each of those questions. Do not repeat the instruction in their bodies.\n- Students see a group's questions together but renumbered, so also give \"display_instruction\": the same instruction with every reference to question numbers removed (\"The diagram below is an illustration of a fungus. Study it and answer questions 31 to 33\" becomes \"The diagram below is an illustration of a fungus.\"). Change nothing else. Use null if nothing is left.\n- Set \"refers_to_number\" to true when a question's own text or options mention another question by its number (e.g. \"using your answer to question 31\"); otherwise false.
 - Every printed diagram gets one entry in \"diagrams\". Reference it from the group if it is shared, from the question if only that question uses it, or from an option if the option itself is a picture (then the option body may be null).
 - A diagram \"description\" must let an illustrator redraw it faithfully without seeing it: what it shows, layout and proportions, every part, and every printed label (letters, roman numerals, words) with exactly what each label's leader line points to. Never name a part that is not named on the page - that could give away an answer.";
 
@@ -66,8 +66,8 @@ pub static EXTRACT_SCHEMA: LazyLock<Value> = LazyLock::new(|| {
                 "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["ref", "instruction", "diagram_ref"],
-                    "properties": { "ref": { "type": "string" }, "instruction": nullable, "diagram_ref": nullable }
+                    "required": ["ref", "instruction", "display_instruction", "diagram_ref"],
+                    "properties": { "ref": { "type": "string" }, "instruction": nullable, "display_instruction": nullable, "diagram_ref": nullable }
                 }
             },
             "questions": {
@@ -75,13 +75,14 @@ pub static EXTRACT_SCHEMA: LazyLock<Value> = LazyLock::new(|| {
                 "items": {
                     "type": "object",
                     "additionalProperties": false,
-                    "required": ["number", "topic", "body", "group_ref", "diagram_ref", "options"],
+                    "required": ["number", "topic", "body", "group_ref", "diagram_ref", "refers_to_number", "options"],
                     "properties": {
                         "number": { "type": "string" },
                         "topic": nullable,
                         "body": { "type": "string" },
                         "group_ref": nullable,
                         "diagram_ref": nullable,
+                        "refers_to_number": { "type": "boolean" },
                         "options": {
                             "type": "array",
                             "items": {
@@ -127,6 +128,9 @@ pub struct ExtractedGroup {
     #[serde(rename = "ref")]
     pub key: String,
     pub instruction: Option<String>,
+    /// The instruction without question numbers, shown to students.
+    #[serde(default)]
+    pub display_instruction: Option<String>,
     pub diagram_ref: Option<String>,
 }
 
@@ -139,6 +143,9 @@ pub struct ExtractedQuestion {
     pub group_ref: Option<String>,
     #[serde(default)]
     pub diagram_ref: Option<String>,
+    /// The text mentions another question by number ("your answer to question 31").
+    #[serde(default)]
+    pub refers_to_number: bool,
     pub options: Vec<ExtractedOption>,
 }
 
