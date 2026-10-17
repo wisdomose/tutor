@@ -1,7 +1,7 @@
 # Build progress — question converter
 
-Handover notes: if a session stops mid-way, continue from the first unchecked
-item. Every checked item is committed and pushed.
+All steps below are done and live at https://tutor.chat-buddy.xyz (API:
+https://tutor-api.chat-buddy.xyz). Every item is committed and pushed.
 
 ## Agreed workflow
 
@@ -36,7 +36,7 @@ UI style: `docs/design/README.md`.
 - [x] Web: `/` upload, `/uploads`, `/uploads/:pageId`
 - [x] Web: `/review`, `/review/:questionId`
 - [x] Web: `/questions`, `/questions/:questionId`
-- [ ] Deploy and test end to end (passed locally against a throwaway database; production next) with the two sample pages
+- [x] Deploy and test end to end — production, 2 Biology pages: 51 questions, 7 flagged, $0.11 OpenAI with the two sample pages
 
 ## Notes from testing (two Biology sample pages, 51 questions)
 
