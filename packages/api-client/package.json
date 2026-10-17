@@ -1,0 +1,17 @@
+{
+  "name": "@tutor/api-client",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "cd ../.. && cargo run -q -p tutor-api -- openapi > packages/api-client/openapi.json && cd packages/api-client && openapi-typescript openapi.json -o src/schema.d.ts"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0"
+  }
+}

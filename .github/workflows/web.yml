@@ -23,6 +23,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm turbo run lint build --filter=@tutor/web
+      - run: pnpm --filter @tutor/web typecheck
 
   image:
     needs: check

@@ -10,33 +10,128 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiSplatRouteImport } from './routes/api/$'
+import { Route as QuestionsIndexRouteImport } from './routes/questions.index'
+import { Route as QuestionsQuestionIdRouteImport } from './routes/questions.$questionId'
+import { Route as ReviewIndexRouteImport } from './routes/review.index'
+import { Route as ReviewQuestionIdRouteImport } from './routes/review.$questionId'
+import { Route as UploadsIndexRouteImport } from './routes/uploads.index'
+import { Route as UploadsPageIdRouteImport } from './routes/uploads.$pageId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: '/api/$',
+  path: '/api/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuestionsIndexRoute = QuestionsIndexRouteImport.update({
+  id: '/questions/',
+  path: '/questions/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuestionsQuestionIdRoute = QuestionsQuestionIdRouteImport.update({
+  id: '/questions/$questionId',
+  path: '/questions/$questionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewIndexRoute = ReviewIndexRouteImport.update({
+  id: '/review/',
+  path: '/review/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewQuestionIdRoute = ReviewQuestionIdRouteImport.update({
+  id: '/review/$questionId',
+  path: '/review/$questionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UploadsIndexRoute = UploadsIndexRouteImport.update({
+  id: '/uploads/',
+  path: '/uploads/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UploadsPageIdRoute = UploadsPageIdRouteImport.update({
+  id: '/uploads/$pageId',
+  path: '/uploads/$pageId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/$': typeof ApiSplatRoute
+  '/questions/$questionId': typeof QuestionsQuestionIdRoute
+  '/review/$questionId': typeof ReviewQuestionIdRoute
+  '/uploads/$pageId': typeof UploadsPageIdRoute
+  '/questions/': typeof QuestionsIndexRoute
+  '/review/': typeof ReviewIndexRoute
+  '/uploads/': typeof UploadsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/$': typeof ApiSplatRoute
+  '/questions/$questionId': typeof QuestionsQuestionIdRoute
+  '/review/$questionId': typeof ReviewQuestionIdRoute
+  '/uploads/$pageId': typeof UploadsPageIdRoute
+  '/questions': typeof QuestionsIndexRoute
+  '/review': typeof ReviewIndexRoute
+  '/uploads': typeof UploadsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/$': typeof ApiSplatRoute
+  '/questions/$questionId': typeof QuestionsQuestionIdRoute
+  '/review/$questionId': typeof ReviewQuestionIdRoute
+  '/uploads/$pageId': typeof UploadsPageIdRoute
+  '/questions/': typeof QuestionsIndexRoute
+  '/review/': typeof ReviewIndexRoute
+  '/uploads/': typeof UploadsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/api/$'
+    | '/questions/$questionId'
+    | '/review/$questionId'
+    | '/uploads/$pageId'
+    | '/questions/'
+    | '/review/'
+    | '/uploads/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/api/$'
+    | '/questions/$questionId'
+    | '/review/$questionId'
+    | '/uploads/$pageId'
+    | '/questions'
+    | '/review'
+    | '/uploads'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/$'
+    | '/questions/$questionId'
+    | '/review/$questionId'
+    | '/uploads/$pageId'
+    | '/questions/'
+    | '/review/'
+    | '/uploads/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiSplatRoute: typeof ApiSplatRoute
+  QuestionsQuestionIdRoute: typeof QuestionsQuestionIdRoute
+  ReviewQuestionIdRoute: typeof ReviewQuestionIdRoute
+  UploadsPageIdRoute: typeof UploadsPageIdRoute
+  QuestionsIndexRoute: typeof QuestionsIndexRoute
+  ReviewIndexRoute: typeof ReviewIndexRoute
+  UploadsIndexRoute: typeof UploadsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +143,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/$': {
+      id: '/api/$'
+      path: '/api/$'
+      fullPath: '/api/$'
+      preLoaderRoute: typeof ApiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/questions/': {
+      id: '/questions/'
+      path: '/questions'
+      fullPath: '/questions/'
+      preLoaderRoute: typeof QuestionsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/questions/$questionId': {
+      id: '/questions/$questionId'
+      path: '/questions/$questionId'
+      fullPath: '/questions/$questionId'
+      preLoaderRoute: typeof QuestionsQuestionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review/': {
+      id: '/review/'
+      path: '/review'
+      fullPath: '/review/'
+      preLoaderRoute: typeof ReviewIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review/$questionId': {
+      id: '/review/$questionId'
+      path: '/review/$questionId'
+      fullPath: '/review/$questionId'
+      preLoaderRoute: typeof ReviewQuestionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/uploads/': {
+      id: '/uploads/'
+      path: '/uploads'
+      fullPath: '/uploads/'
+      preLoaderRoute: typeof UploadsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/uploads/$pageId': {
+      id: '/uploads/$pageId'
+      path: '/uploads/$pageId'
+      fullPath: '/uploads/$pageId'
+      preLoaderRoute: typeof UploadsPageIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiSplatRoute: ApiSplatRoute,
+  QuestionsQuestionIdRoute: QuestionsQuestionIdRoute,
+  ReviewQuestionIdRoute: ReviewQuestionIdRoute,
+  UploadsPageIdRoute: UploadsPageIdRoute,
+  QuestionsIndexRoute: QuestionsIndexRoute,
+  ReviewIndexRoute: ReviewIndexRoute,
+  UploadsIndexRoute: UploadsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

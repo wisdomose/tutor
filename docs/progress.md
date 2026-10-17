@@ -32,11 +32,11 @@ UI style: `docs/design/README.md`.
 - [x] `crates/openai`: answering (Sol + Luna) and diagram drawing
 - [x] Worker: page queue → Claude extraction → answers → flags → diagram queue; pause on usage limit; split-question joining
 - [x] API routes: upload, pages, review, questions, diagrams, queue control + OpenAPI
-- [ ] `packages/api-client` generated from OpenAPI
-- [ ] Web: `/` upload, `/uploads`, `/uploads/:pageId`
-- [ ] Web: `/review`, `/review/:questionId`
-- [ ] Web: `/questions`, `/questions/:questionId`
-- [ ] Deploy and test end to end with the two sample pages
+- [x] `packages/api-client` generated from OpenAPI
+- [x] Web: `/` upload, `/uploads`, `/uploads/:pageId`
+- [x] Web: `/review`, `/review/:questionId`
+- [x] Web: `/questions`, `/questions/:questionId`
+- [ ] Deploy and test end to end (passed locally against a throwaway database; production next) with the two sample pages
 
 ## Notes from testing (two Biology sample pages, 51 questions)
 

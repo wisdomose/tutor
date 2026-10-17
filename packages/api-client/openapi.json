@@ -1,0 +1,1197 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Tutor API",
+    "description": "",
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/diagrams/{id}/accept": {
+      "post": {
+        "tags": [],
+        "operationId": "accept_diagram",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Diagram"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagrams/{id}/redraw": {
+      "post": {
+        "tags": [],
+        "operationId": "redraw_diagram",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedrawRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Diagram"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "crate"
+        ],
+        "summary": "Database is checked live; storage and Claude report their startup checks.",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pages": {
+      "get": {
+        "tags": [],
+        "operationId": "list_pages",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "queued, processing, done or failed.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Default 50, at most 200.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PageSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [],
+        "summary": "Upload up to 20 JPEG photos for one subject. Fields: `subject_id`, then one `photos` part per file.",
+        "operationId": "upload_pages",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {}
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PageSummary"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pages/{id}": {
+      "get": {
+        "tags": [],
+        "operationId": "get_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [],
+        "operationId": "delete_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/pages/{id}/retry": {
+      "post": {
+        "tags": [],
+        "summary": "Re-runs a page from scratch: its questions are deleted and it goes back in the queue.",
+        "operationId": "retry_page",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/questions": {
+      "get": {
+        "tags": [],
+        "operationId": "list_questions",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page_number",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Searches question and option text.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Default 50, at most 200.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/questions/topics": {
+      "get": {
+        "tags": [],
+        "summary": "Distinct topics, optionally for one subject.",
+        "operationId": "list_topics",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/questions/{id}": {
+      "get": {
+        "tags": [],
+        "operationId": "get_question",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [],
+        "summary": "Saves a reviewer's corrections.",
+        "operationId": "update_question",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [],
+        "operationId": "delete_question",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/questions/{id}/resolve": {
+      "post": {
+        "tags": [],
+        "operationId": "resolve_question",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionDetail"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/queue": {
+      "get": {
+        "tags": [],
+        "operationId": "queue_status",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/queue/pause": {
+      "post": {
+        "tags": [],
+        "operationId": "pause_queue",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/queue/resume": {
+      "post": {
+        "tags": [],
+        "summary": "Resumes a hand pause and also retries straight away after a usage-limit pause.",
+        "operationId": "resume_queue",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/review": {
+      "get": {
+        "tags": [],
+        "summary": "Flagged questions not yet resolved, in book order.",
+        "operationId": "review_queue",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/subjects": {
+      "get": {
+        "tags": [],
+        "operationId": "list_subjects",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Subject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usage": {
+      "get": {
+        "tags": [],
+        "operationId": "usage_summary",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Diagram": {
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "redraw_note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviewed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "description": "queued, drawing, done or failed."
+          },
+          "svg_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "API path of the SVG; present when status is done."
+          }
+        }
+      },
+      "ErrorBody": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "database",
+          "storage",
+          "claude",
+          "openai"
+        ],
+        "properties": {
+          "claude": {
+            "type": "string"
+          },
+          "database": {
+            "type": "string"
+          },
+          "openai": {
+            "type": "string"
+          },
+          "storage": {
+            "type": "string"
+          }
+        }
+      },
+      "OptionDetail": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "is_correct"
+        ],
+        "properties": {
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "diagram": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Diagram"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_correct": {
+            "type": "boolean"
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
+      "OptionEdit": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "PageDetail": {
+        "type": "object",
+        "required": [
+          "page",
+          "photo_url",
+          "questions"
+        ],
+        "properties": {
+          "page": {
+            "$ref": "#/components/schemas/PageSummary"
+          },
+          "photo_url": {
+            "type": "string",
+            "description": "API path of the original photo."
+          },
+          "questions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionSummary"
+            }
+          },
+          "tail_fragment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The question this page ends with that runs onto the next page, until joined."
+          }
+        }
+      },
+      "PageSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "subject",
+          "status",
+          "attempts",
+          "uploaded_at",
+          "question_count",
+          "flagged_count",
+          "waiting_for_next_page"
+        ],
+        "properties": {
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flagged_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "next_attempt_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "page_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "processed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "question_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string",
+            "description": "queued, processing, done or failed."
+          },
+          "subject": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "waiting_for_next_page": {
+            "type": "boolean",
+            "description": "The last question runs onto the next page, which hasn't been processed yet."
+          }
+        }
+      },
+      "QuestionDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/QuestionSummary"
+          },
+          {
+            "type": "object",
+            "required": [
+              "options",
+              "photo_url"
+            ],
+            "properties": {
+              "confidence": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "gpt-6.1-sol's confidence in the saved answer."
+              },
+              "diagram": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Diagram",
+                    "description": "The question's own diagram, or the shared one from its group."
+                  }
+                ]
+              },
+              "explanation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "instruction": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Shared instruction, e.g. \"Study the diagram and answer questions 31 to 33\"."
+              },
+              "next_flagged_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Next flagged, unresolved question in book order (for \"Looks right → next\")."
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/OptionDetail"
+                }
+              },
+              "photo_url": {
+                "type": "string"
+              },
+              "second_answer": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "gpt-6-luna's pick (an option label) and reasoning."
+              },
+              "second_explanation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "QuestionEdit": {
+        "type": "object",
+        "required": [
+          "body",
+          "options",
+          "resolve"
+        ],
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "correct_option_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The option to mark correct; null leaves the question without an answer."
+          },
+          "explanation": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OptionEdit"
+            }
+          },
+          "resolve": {
+            "type": "boolean",
+            "description": "Also mark the question as checked."
+          },
+          "topic": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "QuestionList": {
+        "type": "object",
+        "required": [
+          "total",
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionSummary"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "QuestionSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "subject",
+          "page_id",
+          "number",
+          "body",
+          "needs_check",
+          "check_reasons"
+        ],
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "check_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "conflicting_answers, has_diagram, low_confidence, no_answer."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "needs_check": {
+            "type": "boolean"
+          },
+          "number": {
+            "type": "string"
+          },
+          "page_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "page_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resolved_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "topic": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "QueueStatus": {
+        "type": "object",
+        "required": [
+          "paused",
+          "queued",
+          "processing",
+          "failed",
+          "diagrams_pending"
+        ],
+        "properties": {
+          "diagrams_pending": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "limit_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limited_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Claude's usage limit was hit; pages resume after this time."
+          },
+          "paused": {
+            "type": "boolean",
+            "description": "Paused by hand."
+          },
+          "processing": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "queued": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "RedrawRequest": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What was wrong, e.g. \"label III should point to the rhizoids\"."
+          }
+        }
+      },
+      "Subject": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "UsageSummary": {
+        "type": "object",
+        "required": [
+          "pages_done",
+          "openai_usd",
+          "claude_equivalent_usd"
+        ],
+        "properties": {
+          "claude_equivalent_usd": {
+            "type": "number",
+            "format": "double",
+            "description": "What Claude's work would have cost on the API; it runs on the Claude subscription."
+          },
+          "openai_usd": {
+            "type": "number",
+            "format": "double",
+            "description": "Charged to the OpenAI account."
+          },
+          "pages_done": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      }
+    }
+  }
+}
