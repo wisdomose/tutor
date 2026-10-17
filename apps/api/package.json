@@ -1,0 +1,11 @@
+{
+  "name": "@tutor/api",
+  "private": true,
+  "scripts": {
+    "build": "cargo build --release -p tutor-api",
+    "test": "cargo test -p tutor-api",
+    "lint": "cargo clippy -p tutor-api --all-targets -- -D warnings && cargo fmt --check",
+    "dev": "cargo run -p tutor-api",
+    "openapi": "cargo run -q -p tutor-api -- openapi > openapi.json"
+  }
+}

@@ -1,0 +1,10 @@
+[package]
+name = "tutor-storage"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+bytes = "1"
+object_store = { version = "0.12", features = ["aws"] }
+http = "1"
