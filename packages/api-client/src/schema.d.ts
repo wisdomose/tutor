@@ -94,7 +94,10 @@ export interface paths {
         };
         get: operations["list_pages"];
         put?: never;
-        /** Upload up to 20 JPEG photos of one source, in page order. Fields: `source_id`, then one `photos` part per file. */
+        /**
+         * Upload up to 20 JPEG photos of one source, in page order. Fields: `source_id`, then one `photos`
+         *     part per file. Pages rendered from a PDF also send the `upload_id` from `POST /uploads/pdf`.
+         */
         post: operations["upload_pages"];
         delete?: never;
         options?: never;
@@ -259,7 +262,7 @@ export interface paths {
         };
         get: operations["list_sources"];
         put?: never;
-        post?: never;
+        post: operations["create_source"];
         delete?: never;
         options?: never;
         head?: never;
@@ -293,6 +296,26 @@ export interface paths {
         get: operations["list_topics"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/uploads/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stores a PDF of one source as uploaded. Its pages are rendered by the browser and sent
+         *     to `POST /pages` with this upload's id. Fields: `source_id`, `pdf`.
+         */
+        post: operations["upload_pdf"];
         delete?: never;
         options?: never;
         head?: never;
@@ -362,6 +385,31 @@ export interface components {
             openai: string;
             storage: string;
         };
+        NewSource: {
+            edition?: string | null;
+            /**
+             * Format: uuid
+             * @description Required for a paper; for a book, the exam all its questions come from, if just one.
+             */
+            exam_id?: string | null;
+            /** @description book or paper. */
+            kind: string;
+            /** @description by_topic or by_year for a book; single_paper for a paper. */
+            layout: string;
+            note?: string | null;
+            paper?: string | null;
+            publisher?: string | null;
+            /** @description may_june, june_july or nov_dec, as printed; leave out if the source doesn't say. */
+            sitting?: string | null;
+            /** Format: uuid */
+            subject_id: string;
+            title: string;
+            /**
+             * Format: int32
+             * @description Required for a paper.
+             */
+            year?: number | null;
+        };
         OptionDetail: {
             body?: string | null;
             diagram?: null | components["schemas"]["Diagram"];
@@ -410,6 +458,13 @@ export interface components {
             uploaded_at: string;
             /** @description The last question runs onto the next page, which hasn't been processed yet. */
             waiting_for_next_page: boolean;
+        };
+        PdfUpload: {
+            /**
+             * Format: uuid
+             * @description Send with the PDF's rendered pages to `POST /pages`.
+             */
+            upload_id: string;
         };
         QuestionDetail: components["schemas"]["QuestionSummary"] & {
             /** @description gpt-6.1-sol's confidence in the saved answer. */
@@ -1078,6 +1133,37 @@ export interface operations {
             };
         };
     };
+    create_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewSource"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Source"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     list_subjects: {
         parameters: {
             query?: never;
@@ -1114,6 +1200,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Topic"][];
+                };
+            };
+        };
+    };
+    upload_pdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": unknown;
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PdfUpload"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

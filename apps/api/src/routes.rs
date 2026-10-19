@@ -14,6 +14,7 @@ use crate::AppState;
 
 const MAX_PHOTOS: usize = 20;
 const MAX_PHOTO_BYTES: usize = 8 * 1024 * 1024;
+const MAX_PDF_BYTES: usize = 200 * 1024 * 1024;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -35,6 +36,8 @@ const MAX_PHOTO_BYTES: usize = 8 * 1024 * 1024;
         list_topics,
         list_exams,
         list_sources,
+        create_source,
+        upload_pdf,
         get_question,
         update_question,
         resolve_question,
@@ -51,7 +54,11 @@ pub fn router() -> Router<AppState> {
         .route("/subjects", get(list_subjects))
         .route("/topics", get(list_topics))
         .route("/exams", get(list_exams))
-        .route("/sources", get(list_sources))
+        .route("/sources", get(list_sources).post(create_source))
+        .route(
+            "/uploads/pdf",
+            post(upload_pdf).layer(DefaultBodyLimit::max(MAX_PDF_BYTES + 1024 * 1024)),
+        )
         .route("/queue", get(queue_status))
         .route("/queue/pause", post(pause_queue))
         .route("/queue/resume", post(resume_queue))
@@ -231,25 +238,202 @@ pub struct Source {
     created_at: DateTime<Utc>,
 }
 
+const SOURCE_SELECT: &str =
+    "select src.id, src.kind, src.layout, src.title, src.publisher, src.edition, src.note,
+    src.subject_id, s.name as subject, s.level, src.exam_id, src.year, src.paper,
+    src.sitting, (select count(*) from pages p where p.source_id = src.id) as page_count,
+    src.created_at
+  from sources src join subjects s on s.id = src.subject_id";
+
 #[utoipa::path(get, path = "/sources", params(SubjectFilter), responses((status = 200, body = Vec<Source>)))]
 async fn list_sources(
     State(s): State<AppState>,
     Query(f): Query<SubjectFilter>,
 ) -> ApiResult<Vec<Source>> {
     Ok(Json(
-        sqlx::query_as(
-            "select src.id, src.kind, src.layout, src.title, src.publisher, src.edition, src.note,
-                    src.subject_id, s.name as subject, s.level, src.exam_id, src.year, src.paper,
-                    src.sitting, (select count(*) from pages p where p.source_id = src.id) as page_count,
-                    src.created_at
-             from sources src join subjects s on s.id = src.subject_id
-             where $1::uuid is null or src.subject_id = $1
-             order by src.title",
-        )
+        sqlx::query_as(&format!(
+            "{SOURCE_SELECT} where $1::uuid is null or src.subject_id = $1 order by src.title"
+        ))
         .bind(f.subject_id)
         .fetch_all(&s.db)
         .await?,
     ))
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct NewSource {
+    /// book or paper.
+    kind: String,
+    /// by_topic or by_year for a book; single_paper for a paper.
+    layout: String,
+    title: String,
+    publisher: Option<String>,
+    edition: Option<String>,
+    note: Option<String>,
+    subject_id: Uuid,
+    /// Required for a paper; for a book, the exam all its questions come from, if just one.
+    exam_id: Option<Uuid>,
+    /// Required for a paper.
+    year: Option<i32>,
+    paper: Option<String>,
+    /// may_june, june_july or nov_dec, as printed; leave out if the source doesn't say.
+    sitting: Option<String>,
+}
+
+/// Trims text and turns blanks into none.
+fn clean(text: Option<String>) -> Option<String> {
+    text.map(|t| t.trim().to_owned()).filter(|t| !t.is_empty())
+}
+
+#[utoipa::path(post, path = "/sources", request_body = NewSource,
+    responses((status = 200, body = Source), (status = 400, body = ErrorBody)))]
+async fn create_source(State(s): State<AppState>, Json(n): Json<NewSource>) -> ApiResult<Source> {
+    let title = n.title.trim();
+    if title.is_empty() {
+        return Err(bad_request("a source needs a title"));
+    }
+    match (n.kind.as_str(), n.layout.as_str()) {
+        ("book", "by_topic" | "by_year") | ("paper", "single_paper") => {}
+        ("book" | "paper", _) => {
+            return Err(bad_request("that layout doesn't fit that kind of source"));
+        }
+        _ => return Err(bad_request("kind must be book or paper")),
+    }
+    if n.kind == "paper" && (n.exam_id.is_none() || n.year.is_none()) {
+        return Err(bad_request("a paper needs its exam and year"));
+    }
+    if let Some(year) = n.year
+        && !(1950..=2100).contains(&year)
+    {
+        return Err(bad_request("that year doesn't look right"));
+    }
+    let sitting = clean(n.sitting);
+    if let Some(sitting) = &sitting
+        && !["may_june", "june_july", "nov_dec"].contains(&sitting.as_str())
+    {
+        return Err(bad_request(
+            "sitting must be may_june, june_july or nov_dec",
+        ));
+    }
+    let subject_level: Option<String> =
+        sqlx::query_scalar("select level from subjects where id = $1")
+            .bind(n.subject_id)
+            .fetch_optional(&s.db)
+            .await?;
+    let Some(subject_level) = subject_level else {
+        return Err(bad_request("unknown subject"));
+    };
+    if let Some(exam_id) = n.exam_id {
+        let exam_level: Option<String> =
+            sqlx::query_scalar("select level from exams where id = $1")
+                .bind(exam_id)
+                .fetch_optional(&s.db)
+                .await?;
+        match exam_level {
+            None => return Err(bad_request("unknown exam")),
+            Some(level) if level != subject_level => {
+                return Err(bad_request(
+                    "that exam is for a different level than the subject",
+                ));
+            }
+            Some(_) => {}
+        }
+    }
+    let id: Uuid = sqlx::query_scalar(
+        "insert into sources (kind, layout, title, publisher, edition, note, subject_id, exam_id, year, paper, sitting)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id",
+    )
+    .bind(&n.kind)
+    .bind(&n.layout)
+    .bind(title)
+    .bind(clean(n.publisher))
+    .bind(clean(n.edition))
+    .bind(clean(n.note))
+    .bind(n.subject_id)
+    .bind(n.exam_id)
+    .bind(n.year)
+    .bind(clean(n.paper))
+    .bind(sitting)
+    .fetch_one(&s.db)
+    .await?;
+    Ok(Json(
+        sqlx::query_as(&format!("{SOURCE_SELECT} where src.id = $1"))
+            .bind(id)
+            .fetch_one(&s.db)
+            .await?,
+    ))
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct PdfUpload {
+    /// Send with the PDF's rendered pages to `POST /pages`.
+    upload_id: Uuid,
+}
+
+/// Stores a PDF of one source as uploaded. Its pages are rendered by the browser and sent
+/// to `POST /pages` with this upload's id. Fields: `source_id`, `pdf`.
+#[utoipa::path(post, path = "/uploads/pdf", request_body(content_type = "multipart/form-data"),
+    responses((status = 200, body = PdfUpload), (status = 400, body = ErrorBody)))]
+async fn upload_pdf(State(s): State<AppState>, mut form: Multipart) -> ApiResult<PdfUpload> {
+    let mut source_id: Option<Uuid> = None;
+    let mut pdf = None;
+    while let Some(field) = form
+        .next_field()
+        .await
+        .map_err(|e| bad_request(e.to_string()))?
+    {
+        match field.name() {
+            Some("source_id") => source_id = Some(parse_uuid_field(field, "source_id").await?),
+            Some("pdf") => {
+                let name = field.file_name().map(str::to_owned);
+                let bytes = field
+                    .bytes()
+                    .await
+                    .map_err(|e| bad_request(e.to_string()))?;
+                if !bytes.starts_with(b"%PDF-") {
+                    return Err(bad_request("that file isn't a PDF"));
+                }
+                pdf = Some((name, bytes));
+            }
+            _ => {}
+        }
+    }
+    let source_id = source_id.ok_or_else(|| bad_request("source_id is required"))?;
+    let (name, bytes) = pdf.ok_or_else(|| bad_request("pdf is required"))?;
+    ensure_source(&s, source_id).await?;
+    let id = Uuid::new_v4();
+    let key = format!("uploads/{id}.pdf");
+    s.storage.put(&key, bytes).await?;
+    sqlx::query("insert into uploads (id, source_id, kind, file_key, original_name) values ($1, $2, 'pdf', $3, $4)")
+        .bind(id)
+        .bind(source_id)
+        .bind(&key)
+        .bind(name)
+        .execute(&s.db)
+        .await?;
+    Ok(Json(PdfUpload { upload_id: id }))
+}
+
+async fn parse_uuid_field(
+    field: axum::extract::multipart::Field<'_>,
+    name: &str,
+) -> Result<Uuid, ApiError> {
+    let text = field.text().await.map_err(|e| bad_request(e.to_string()))?;
+    text.trim()
+        .parse()
+        .map_err(|_| bad_request(format!("invalid {name}")))
+}
+
+async fn ensure_source(s: &AppState, id: Uuid) -> Result<(), ApiError> {
+    let exists: bool = sqlx::query_scalar("select exists(select 1 from sources where id = $1)")
+        .bind(id)
+        .fetch_one(&s.db)
+        .await?;
+    if exists {
+        Ok(())
+    } else {
+        Err(bad_request("unknown source"))
+    }
 }
 
 // ── Queue ───────────────────────────────────────────────────────────────────
@@ -356,7 +540,8 @@ const PAGE_SELECT: &str = "select p.id, p.source_id, src.title as source, src.su
     (p.tail_fragment is not null and not p.tail_joined) as waiting_for_next_page
   from pages p join sources src on src.id = p.source_id join subjects s on s.id = src.subject_id";
 
-/// Upload up to 20 JPEG photos of one source, in page order. Fields: `source_id`, then one `photos` part per file.
+/// Upload up to 20 JPEG photos of one source, in page order. Fields: `source_id`, then one `photos`
+/// part per file. Pages rendered from a PDF also send the `upload_id` from `POST /uploads/pdf`.
 #[utoipa::path(post, path = "/pages", request_body(content_type = "multipart/form-data"),
     responses((status = 200, body = Vec<PageSummary>), (status = 400, body = ErrorBody)))]
 async fn upload_pages(
@@ -364,6 +549,7 @@ async fn upload_pages(
     mut form: Multipart,
 ) -> ApiResult<Vec<PageSummary>> {
     let mut source_id: Option<Uuid> = None;
+    let mut pdf_upload: Option<Uuid> = None;
     let mut photos = Vec::new();
     while let Some(field) = form
         .next_field()
@@ -371,14 +557,8 @@ async fn upload_pages(
         .map_err(|e| bad_request(e.to_string()))?
     {
         match field.name() {
-            Some("source_id") => {
-                let text = field.text().await.map_err(|e| bad_request(e.to_string()))?;
-                source_id = Some(
-                    text.trim()
-                        .parse()
-                        .map_err(|_| bad_request("invalid source_id"))?,
-                );
-            }
+            Some("source_id") => source_id = Some(parse_uuid_field(field, "source_id").await?),
+            Some("upload_id") => pdf_upload = Some(parse_uuid_field(field, "upload_id").await?),
             Some("photos") => {
                 let bytes = field
                     .bytes()
@@ -401,12 +581,18 @@ async fn upload_pages(
             "send between 1 and {MAX_PHOTOS} photos"
         )));
     }
-    let exists: bool = sqlx::query_scalar("select exists(select 1 from sources where id = $1)")
+    ensure_source(&s, source_id).await?;
+    if let Some(upload_id) = pdf_upload {
+        let fits: bool = sqlx::query_scalar(
+            "select exists(select 1 from uploads where id = $1 and source_id = $2 and kind = 'pdf')",
+        )
+        .bind(upload_id)
         .bind(source_id)
         .fetch_one(&s.db)
         .await?;
-    if !exists {
-        return Err(bad_request("unknown source"));
+        if !fits {
+            return Err(bad_request("that upload_id isn't a PDF of this source"));
+        }
     }
 
     let mut ids = Vec::new();
@@ -420,13 +606,18 @@ async fn upload_pages(
             .bind(source_id)
             .execute(&mut *tx)
             .await?;
-        let upload_id: Uuid = sqlx::query_scalar(
-            "insert into uploads (source_id, kind, file_key) values ($1, 'photo', $2) returning id",
-        )
-        .bind(source_id)
-        .bind(&key)
-        .fetch_one(&mut *tx)
-        .await?;
+        let upload_id: Uuid = match pdf_upload {
+            Some(id) => id,
+            None => {
+                sqlx::query_scalar(
+                    "insert into uploads (source_id, kind, file_key) values ($1, 'photo', $2) returning id",
+                )
+                .bind(source_id)
+                .bind(&key)
+                .fetch_one(&mut *tx)
+                .await?
+            }
+        };
         sqlx::query(
             "insert into pages (id, source_id, upload_id, photo_key, position)
              values ($1, $2, $3, $4, (select coalesce(max(position), 0) + 1 from pages where source_id = $2))",
@@ -586,19 +777,36 @@ async fn delete_page(
     State(s): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, ApiError> {
-    let key: String = sqlx::query_scalar("select photo_key from pages where id = $1")
-        .bind(id)
-        .fetch_one(&s.db)
-        .await?;
+    let (key, upload_id): (String, Uuid) =
+        sqlx::query_as("select photo_key, upload_id from pages where id = $1")
+            .bind(id)
+            .fetch_one(&s.db)
+            .await?;
     let mut tx = s.db.begin().await?;
     clear_page(&mut tx, id).await?;
     sqlx::query("delete from pages where id = $1")
         .bind(id)
         .execute(&mut *tx)
         .await?;
+    // A PDF stays while any of its pages do; a photo upload is the page itself.
+    let upload_file: Option<(String, String)> = sqlx::query_as(
+        "delete from uploads u where u.id = $1 and not exists (select 1 from pages where upload_id = u.id)
+         returning kind, file_key",
+    )
+    .bind(upload_id)
+    .fetch_optional(&mut *tx)
+    .await?;
     tx.commit().await?;
-    if let Err(e) = s.storage.delete(&key).await {
-        tracing::warn!("deleting photo {key}: {e:#}");
+    let mut keys = vec![key];
+    if let Some((kind, file_key)) = upload_file
+        && kind == "pdf"
+    {
+        keys.push(file_key);
+    }
+    for key in keys {
+        if let Err(e) = s.storage.delete(&key).await {
+            tracing::warn!("deleting {key}: {e:#}");
+        }
     }
     Ok(StatusCode::NO_CONTENT)
 }

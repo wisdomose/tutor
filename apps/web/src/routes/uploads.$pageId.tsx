@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PagePhoto } from "#/components/PagePhoto";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { MathText } from "#/components/MathText";
+import { PagePhoto } from "#/components/PagePhoto";
 import { Reasons } from "#/components/Reasons";
 import {
 	Button,
@@ -61,7 +61,7 @@ function PageDetailPage() {
 
 	return (
 		<>
-			<PageTitle label={page.subject}>Page {page.page_number ?? "?"}</PageTitle>
+			<PageTitle label={page.source}>Page {page.page_number ?? "?"}</PageTitle>
 			<div className="-mt-2 flex flex-wrap items-center gap-2">
 				<StatusChip status={page.status} />
 				{page.status === "done" && (

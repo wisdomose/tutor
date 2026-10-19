@@ -239,7 +239,7 @@
       },
       "post": {
         "tags": [],
-        "summary": "Upload up to 20 JPEG photos of one source, in page order. Fields: `source_id`, then one `photos` part per file.",
+        "summary": "Upload up to 20 JPEG photos of one source, in page order. Fields: `source_id`, then one `photos`\npart per file. Pages rendered from a PDF also send the `upload_id` from `POST /uploads/pdf`.",
         "operationId": "upload_pages",
         "requestBody": {
           "content": {
@@ -687,6 +687,42 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [],
+        "operationId": "create_source",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSource"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Source"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/subjects": {
@@ -736,6 +772,40 @@
                   "items": {
                     "$ref": "#/components/schemas/Topic"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/uploads/pdf": {
+      "post": {
+        "tags": [],
+        "summary": "Stores a PDF of one source as uploaded. Its pages are rendered by the browser and sent\nto `POST /pages` with this upload's id. Fields: `source_id`, `pdf`.",
+        "operationId": "upload_pdf",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {}
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PdfUpload"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             }
@@ -910,6 +980,79 @@
           }
         }
       },
+      "NewSource": {
+        "type": "object",
+        "required": [
+          "kind",
+          "layout",
+          "title",
+          "subject_id"
+        ],
+        "properties": {
+          "edition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "exam_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Required for a paper; for a book, the exam all its questions come from, if just one."
+          },
+          "kind": {
+            "type": "string",
+            "description": "book or paper."
+          },
+          "layout": {
+            "type": "string",
+            "description": "by_topic or by_year for a book; single_paper for a paper."
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paper": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "publisher": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sitting": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "may_june, june_july or nov_dec, as printed; leave out if the source doesn't say."
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "year": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Required for a paper."
+          }
+        }
+      },
       "OptionDetail": {
         "type": "object",
         "required": [
@@ -1077,6 +1220,19 @@
           "waiting_for_next_page": {
             "type": "boolean",
             "description": "The last question runs onto the next page, which hasn't been processed yet."
+          }
+        }
+      },
+      "PdfUpload": {
+        "type": "object",
+        "required": [
+          "upload_id"
+        ],
+        "properties": {
+          "upload_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Send with the PDF's rendered pages to `POST /pages`."
           }
         }
       },

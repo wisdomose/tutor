@@ -164,7 +164,9 @@ text in WAEC 2015 and WAEC 2017 is two questions.
 
 - Syllabus topic lists must exist for a subject before its pages are uploaded,
   so Claude has a list to match against.
-- Upload page: choose or create a source; accept photos and PDFs.
+- Upload page: choose or create a source; accept photos and PDFs. (Done:
+  the browser renders each PDF page to a 2400px JPEG and sends it with the
+  stored PDF's `upload_id`, so the reader sees PDFs and photos the same way.)
 - Claude prompt:
   - Extract theory questions, with their part trees.
   - Read tags as year/question number.

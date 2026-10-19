@@ -14,11 +14,11 @@ import {
 } from "#/components/ui";
 import { api, unwrap } from "#/lib/api";
 
-type Search = { subject?: string; status?: string };
+type Search = { source?: string; status?: string };
 
 export const Route = createFileRoute("/uploads/")({
 	validateSearch: (s: Record<string, unknown>): Search => ({
-		subject: typeof s.subject === "string" ? s.subject : undefined,
+		source: typeof s.source === "string" ? s.source : undefined,
 		status: typeof s.status === "string" ? s.status : undefined,
 	}),
 	component: UploadsPage,
@@ -34,9 +34,9 @@ const statuses = [
 function UploadsPage() {
 	const search = Route.useSearch();
 	const navigate = useNavigate({ from: Route.fullPath });
-	const subjects = useQuery({
-		queryKey: ["subjects"],
-		queryFn: () => unwrap(api.GET("/subjects")),
+	const sources = useQuery({
+		queryKey: ["sources"],
+		queryFn: () => unwrap(api.GET("/sources")),
 	});
 	const pages = useQuery({
 		queryKey: ["pages", search],
@@ -45,7 +45,7 @@ function UploadsPage() {
 				api.GET("/pages", {
 					params: {
 						query: {
-							subject_id: search.subject,
+							source_id: search.source,
 							status: search.status,
 							limit: 200,
 						},
@@ -61,19 +61,19 @@ function UploadsPage() {
 			<QueuePanel />
 
 			<div className="grid grid-cols-2 gap-3">
-				<Field label="Subject">
+				<Field label="Source">
 					<Select
-						value={search.subject ?? ""}
+						value={search.source ?? ""}
 						onChange={(e) =>
 							navigate({
-								search: (s) => ({ ...s, subject: e.target.value || undefined }),
+								search: (s) => ({ ...s, source: e.target.value || undefined }),
 							})
 						}
 					>
-						<option value="">All subjects</option>
-						{subjects.data?.map((s) => (
+						<option value="">All sources</option>
+						{sources.data?.map((s) => (
 							<option key={s.id} value={s.id}>
-								{s.name}
+								{s.title} · {s.subject}
 							</option>
 						))}
 					</Select>

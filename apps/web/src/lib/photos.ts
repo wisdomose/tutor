@@ -29,20 +29,48 @@ export async function shrinkPhoto(file: File): Promise<Blob> {
 	);
 }
 
-/** Uploads photos for one subject, reporting progress 0–1 (fetch can't report upload progress). */
+/** Uploads photos of one source in page order, reporting progress 0–1 (fetch can't report upload progress).
+ * Pages rendered from a PDF pass the PDF's `uploadId`. */
 export function uploadPhotos(
-	subjectId: string,
+	sourceId: string,
 	photos: Blob[],
 	onProgress: (fraction: number) => void,
+	uploadId?: string,
 ): Promise<PageSummary[]> {
 	const form = new FormData();
-	form.append("subject_id", subjectId);
+	form.append("source_id", sourceId);
+	if (uploadId) form.append("upload_id", uploadId);
 	photos.forEach((p, i) => {
 		form.append("photos", p, `page-${i + 1}.jpg`);
 	});
+	return postForm("/api/pages", form, onProgress);
+}
+
+/** Stores the PDF itself; its pages follow through `uploadPhotos` with the returned id. */
+export async function uploadPdf(
+	sourceId: string,
+	pdf: File,
+	onProgress: (fraction: number) => void,
+): Promise<string> {
+	const form = new FormData();
+	form.append("source_id", sourceId);
+	form.append("pdf", pdf, pdf.name);
+	const body = await postForm<{ upload_id: string }>(
+		"/api/uploads/pdf",
+		form,
+		onProgress,
+	);
+	return body.upload_id;
+}
+
+function postForm<T>(
+	url: string,
+	form: FormData,
+	onProgress: (fraction: number) => void,
+): Promise<T> {
 	return new Promise((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
-		xhr.open("POST", "/api/pages");
+		xhr.open("POST", url);
 		xhr.upload.onprogress = (e) =>
 			e.lengthComputable && onProgress(e.loaded / e.total);
 		xhr.onload = () => {
@@ -52,7 +80,7 @@ export function uploadPhotos(
 			} catch {
 				body = null;
 			}
-			if (xhr.status >= 200 && xhr.status < 300) resolve(body as PageSummary[]);
+			if (xhr.status >= 200 && xhr.status < 300) resolve(body as T);
 			else
 				reject(
 					new Error(

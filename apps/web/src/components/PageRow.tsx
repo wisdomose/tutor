@@ -16,7 +16,7 @@ export function PageRow({ page }: { page: PageSummary }) {
 			</div>
 			<div className="min-w-0 flex-1">
 				<div className="flex flex-wrap items-center gap-1.5">
-					<span className="text-[15px] font-extrabold">{page.subject}</span>
+					<span className="text-[15px] font-extrabold">{page.source}</span>
 					<StatusChip status={page.status} />
 					{page.flagged_count > 0 && (
 						<Chip fill="lavender">{page.flagged_count} to check</Chip>

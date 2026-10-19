@@ -5,6 +5,10 @@ import type { components, paths } from './schema'
 
 export type Schemas = components['schemas']
 export type Subject = Schemas['Subject']
+export type Topic = Schemas['Topic']
+export type Exam = Schemas['Exam']
+export type Source = Schemas['Source']
+export type NewSource = Schemas['NewSource']
 export type QueueStatus = Schemas['QueueStatus']
 export type UsageSummary = Schemas['UsageSummary']
 export type PageSummary = Schemas['PageSummary']
