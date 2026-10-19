@@ -11,8 +11,10 @@ Not built yet. Replaces the question-bank part of `design-summary.md` and the
 - Junior (JSS) and senior (SSS) subjects are separate, even with the same name.
 - Questions carry their exam source (body, exam, year, paper, sitting).
 - Some questions are written by our team, not taken from a book.
-- Topics come from one syllabus list per subject, taken from the official sources'
-  websites: WAEC for SSS, NERDC for JSS, with NECO-only topics added.
+- Topics come from one merged syllabus list per subject. SSS: WAEC's syllabus is
+  the frame (third-party copies from waecsyllabus.com, as WAEC doesn't publish its
+  own) with topics only JAMB's official UTME syllabus has added in. JSS: not
+  loaded yet (no NERDC or BECE syllabus found online).
 
 ## Source formats seen
 
@@ -33,11 +35,19 @@ Not built yet. Replaces the question-bank part of `design-summary.md` and the
 
 ## Reference lists
 
-**subjects** (changed): `level` (`jss` | `sss`), `name`; unique (level, name). Subjects
-are imported with their topics from the official syllabuses, never typed in by hand.
+**subjects** (changed): `level` (`jss` | `sss`), `name`, `syllabuses` (the documents
+used, with URL and whether official); unique (level, name). Subjects are imported
+with their topics from the syllabuses, never typed in by hand.
 
 **syllabus_topics** (new): `subject_id`, `parent_id` (theme → topic), `name`,
-`position`, `source_url`.
+`position`, `bodies` (which syllabuses list it: WAEC, JAMB, …).
+
+Syllabus outlines live in `crates/db/syllabus/<level>/<subject>.txt`;
+`crates/db/syllabus/generate.py` turns them into a migration. JAMB's Use of English
+is merged into English Language. Left out: WAEC subjects for other countries
+(Basketry, Ceramics, Textiles, Forestry, Fisheries Alt A, Animal Husbandry Alt A,
+ICT core, West African Traditional Religion, Business Management, Clerical Office
+Duties) and the practical-only Shorthand and Typewriting.
 
 **exam_bodies** (new): `code`, `name`. WAEC, NECO, NABTEB, JAMB.
 

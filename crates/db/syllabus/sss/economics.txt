@@ -1,0 +1,31 @@
+subject: Economics
+level: sss
+syllabus: WAEC https://waecsyllabus.com/files/ssce/ECONOMICS.pdf unofficial
+syllabus: JAMB https://ibass.jamb.gov.ng/static/media/Economics.da2a30ae8659e29c8bb4.pdf official
+
+Definition and Scope of Economics [WJ]
+Factors of Production [WJ]
+Economic Systems [WJ]
+Basic Tools of Economic Analysis [WJ]
+Demand and Elasticity of Demand [WJ]
+Supply and Elasticity of Supply [WJ]
+Theory of Consumer Behaviour [WJ]
+Theory of Price Determination and Price Control [WJ]
+Theory of Production [WJ]
+Theory of Cost and Revenue [WJ]
+Market Structures [WJ]
+Business Organizations [WJ]
+Distributive Trade [W]
+Population [WJ]
+Labour Market [WJ]
+Agriculture [WJ]
+Industrialization [WJ]
+Natural Resources and the Nigerian Economy [J]
+National Income [WJ]
+Money and Inflation [WJ]
+Financial Institutions [WJ]
+Public Finance [WJ]
+Economic Development and Planning [WJ]
+International Trade and Balance of Payments [WJ]
+Economic Integration [W]
+International Economic Organizations [WJ]

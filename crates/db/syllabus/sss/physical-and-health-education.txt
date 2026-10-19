@@ -1,0 +1,16 @@
+subject: Physical and Health Education
+level: sss
+syllabus: JAMB https://ibass.jamb.gov.ng/static/media/PHE.d3add6c626efcb3f0f2b.pdf official
+
+Foundations and Principles of Physical and Health Education [J]
+Human Anatomy and Physiology in Relation to PHE [J]
+Theory and Practice of Sports and Games [J]
+Food, Nutrition and Drugs [J]
+Physical Fitness and Conditioning Programmes [J]
+Recreation, Leisure and Dance [J]
+First Aid and Safety Education [J]
+National and International Sports Competitions [J]
+Corrective and Adapted Physical Education [J]
+Personal, Community and Environmental Health [J]
+Communicable and Non-communicable Diseases [J]
+Family Life and Human Sexuality Education [J]

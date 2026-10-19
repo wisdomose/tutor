@@ -560,6 +560,8 @@ export interface components {
             name: string;
         };
         Topic: {
+            /** @description Syllabuses that list it: WAEC, JAMB, ... */
+            bodies: string[];
             /** Format: uuid */
             id: string;
             name: string;

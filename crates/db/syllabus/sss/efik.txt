@@ -1,0 +1,20 @@
+subject: Efik
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/EFIK.pdf unofficial
+
+Language [W]
+  Comprehension [W]
+  Composition and letter writing [W]
+  Sound system and orthography [W]
+  Grammar [W]
+  Vocabulary and word formation [W]
+  Translation [W]
+Literature [W]
+  Basic principles of literary appreciation [W]
+  Oral literature [W]
+  Written literature: prose, drama and poetry [W]
+Culture [W]
+  Customs and traditions [W]
+  Social and political institutions [W]
+  Beliefs, festivals and ceremonies [W]
+  Occupations, arts and crafts [W]

@@ -1,0 +1,13 @@
+subject: Store Management
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/STORE%20MANAGEMENT.pdf unofficial
+
+Introduction to Store Management [W]
+Retailing, Wholesaling, Warehousing and Transportation [W]
+Stock Control and Pricing [W]
+Organizational Policy, Standards and Culture [W]
+Business Communication [W]
+Business Law [W]
+Government Regulation of Business [W]
+Book Keeping [W]
+Risk Management [W]

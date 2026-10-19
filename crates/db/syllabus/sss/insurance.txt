@@ -1,0 +1,13 @@
+subject: Insurance
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/INSURANCE.pdf unofficial
+
+Introduction to Insurance: Risks, Hazards and Perils [W]
+Principles of Insurance [W]
+Documents Used in Effecting Insurance Contracts [W]
+Insurance Practice: Reinsurance, Renewals and Claims [W]
+Life Assurance [W]
+Non-life Insurance Products [W]
+The Insurance Market and its Operators [W]
+Insurance Regulators [W]
+Common Insurance Terminologies [W]

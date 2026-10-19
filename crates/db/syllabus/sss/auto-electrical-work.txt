@@ -1,0 +1,10 @@
+subject: Auto Electrical Work
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/AUTO%20ELECTRICAL%20WORK.pdf unofficial
+
+Battery [W]
+Starting System [W]
+Ignition System [W]
+Charging System [W]
+Lighting System [W]
+Auxiliary System [W]

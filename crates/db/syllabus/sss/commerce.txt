@@ -1,0 +1,32 @@
+subject: Commerce
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/COMMERCE.pdf unofficial
+syllabus: JAMB https://ibass.jamb.gov.ng/static/media/Commerce.819d9c6929bc849d1cd9.pdf official
+
+Introduction to Commerce and E-commerce [WJ]
+Occupation [WJ]
+Production [WJ]
+Business Units [WJ]
+Trade Associations and Consumer Associations [WJ]
+Business Capital, Credit and Profits [WJ]
+Home Trade: Retail and Wholesale [WJ]
+Channels of Distribution [WJ]
+Foreign Trade [WJ]
+Purchase and Sale of Goods: Documents, Terms and Means of Payment [WJ]
+Money [WJ]
+Banking [WJ]
+Insurance [WJ]
+Capital Market and Stock Exchange [WJ]
+Commodity Exchange [WJ]
+Transport [WJ]
+Tourism [W]
+Communication [WJ]
+Warehousing [WJ]
+Advertising [WJ]
+Introduction to Marketing [WJ]
+Legal Aspects of Business [WJ]
+Consumer Protection [WJ]
+Government Policies: Commercialization, Privatization and Deregulation [WJ]
+Introduction to Business Management [WJ]
+Business Environment and Social Responsibility [WJ]
+Economic Groupings: ECOWAS and Others [W]

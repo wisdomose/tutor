@@ -1,0 +1,21 @@
+subject: Auto Mechanics
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/AUTO%20MECHANICS.pdf unofficial
+
+Workshop Safety [W]
+Basic Tools and Measuring Instruments [W]
+Layout of a Motor Vehicle [W]
+The Engine [W]
+Fuel Supply Systems [W]
+Exhaust System [W]
+Lubrication System [W]
+Cooling System [W]
+Transmission System [W]
+Wheels and Tyres [W]
+Braking System [W]
+Steering System [W]
+Suspension System [W]
+Electrical Systems [W]
+Automotive Electronics [W]
+Auto Air-conditioning [W]
+Safe Motoring [W]

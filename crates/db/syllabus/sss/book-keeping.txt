@@ -1,0 +1,27 @@
+subject: Book Keeping
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/BOOK%20KEEPING.pdf unofficial
+
+Introduction to Book Keeping [W]
+Accounting Concepts [W]
+Books of Original Entry [W]
+The Ledger and Double Entry [W]
+Cash Book [W]
+Bank Reconciliation Statement [W]
+Trial Balance and Correction of Errors [W]
+Financial Statements of a Sole Trader [W]
+Adjustments to Financial Statements [W]
+Control Accounts [W]
+Single Entry and Incomplete Records [W]
+Accounts of Not-for-profit Organizations [W]
+Manufacturing Accounts [W]
+Partnership Accounts [W]
+Joint Venture Accounts [W]
+Departmental and Branch Accounts [W]
+Introduction to Company Accounts [W]
+Interpretation of Accounts [W]
+Purchase of Business [W]
+Consignment Accounts [W]
+Hire Purchase Accounts [W]
+Contract Accounts [W]
+Cooperative Accounts [W]

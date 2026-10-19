@@ -1,0 +1,13 @@
+subject: Welding and Fabrication Engineering Craft Practice
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/WELDING%20AND%20FABRICATION%20ENGINEERING%20CRAFT%20PRACTICE.pdf unofficial
+
+Workshop and Standard Safety Practices [W]
+Properties of Metals and Heat Treatment [W]
+Tools and Equipment in Fabrication and Welding [W]
+Welding and Fabrication Operations [W]
+Fasteners [W]
+Forging Process [W]
+Preparation for Welding [W]
+Practical Work and Projects [W]
+Business and Entrepreneurship [W]

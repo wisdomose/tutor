@@ -1,0 +1,29 @@
+subject: Financial Accounting
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/FINANCIAL%20ACCOUNTS.pdf unofficial
+syllabus: JAMB https://ibass.jamb.gov.ng/static/media/Principles-of-Accounting.64fc902ad37449d1f6ff.pdf official
+
+Introduction to Financial Accounting [WJ]
+Ethics, Professional and Regulatory Bodies [J]
+The Accounting Equation and Double Entry [WJ]
+Source Documents and Subsidiary Books [WJ]
+The Ledger and Trial Balance [WJ]
+Cash Book and Petty Cash Book [WJ]
+Bank Reconciliation Statements [WJ]
+Correction of Errors and Suspense Account [WJ]
+Accounting Concepts [WJ]
+Final Accounts of a Sole Trader [WJ]
+Provisions, Depreciation and Reserves [WJ]
+Stock Valuation [J]
+Manufacturing Accounts [WJ]
+Control Accounts and Self-balancing Ledgers [WJ]
+Single Entry and Incomplete Records [WJ]
+Accounts of Not-for-profit Organizations [WJ]
+Partnership Accounts [WJ]
+Company Accounts [WJ]
+Interpretation of Accounts Using Ratios [WJ]
+Departmental and Branch Accounts [WJ]
+Joint Venture, Consignment, Contract and Hire Purchase Accounts [WJ]
+Public Sector Accounting [WJ]
+Information Technology in Accounting [J]
+The Financial System and Capital Market [W]

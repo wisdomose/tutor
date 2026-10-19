@@ -1,0 +1,11 @@
+subject: Home Management
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/HOME%20MANAGEMENT.pdf unofficial
+
+Principles of Management [W]
+Family Living [W]
+Feeding the Family [W]
+Clothing the Family [W]
+Housing the Family [W]
+Wealth Creation and Management [W]
+Consumer Education [W]

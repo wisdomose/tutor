@@ -1,0 +1,28 @@
+subject: Further Mathematics
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/FURTHER%20MATHEMATICS%20OR%20MATHEMATICS%20(ELECTIVE).pdf unofficial
+
+Pure Mathematics [W]
+  Sets [W]
+  Surds [W]
+  Binary operations [W]
+  Logical reasoning [W]
+  Functions [W]
+  Polynomial functions, equations and inequalities [W]
+  Rational functions and partial fractions [W]
+  Indices and logarithmic functions [W]
+  Permutations and combinations [W]
+  Binomial theorem [W]
+  Sequences and series [W]
+  Matrices and linear transformation [W]
+  Trigonometry [W]
+  Coordinate geometry: straight lines and conic sections [W]
+  Differentiation [W]
+  Integration [W]
+Statistics and Probability [W]
+  Statistics: representation, location, dispersion and correlation [W]
+  Probability and probability distributions [W]
+Vectors and Mechanics [W]
+  Vectors [W]
+  Statics [W]
+  Dynamics [W]

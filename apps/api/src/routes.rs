@@ -154,6 +154,8 @@ pub struct Topic {
     parent_id: Option<Uuid>,
     name: String,
     position: i32,
+    /// Syllabuses that list it: WAEC, JAMB, ...
+    bodies: Vec<String>,
 }
 
 #[derive(Deserialize, IntoParams)]
@@ -170,7 +172,7 @@ async fn list_topics(
 ) -> ApiResult<Vec<Topic>> {
     Ok(Json(
         sqlx::query_as(
-            "select id, subject_id, parent_id, name, position from syllabus_topics
+            "select id, subject_id, parent_id, name, position, bodies from syllabus_topics
              where $1::uuid is null or subject_id = $1
              order by subject_id, position, name",
         )

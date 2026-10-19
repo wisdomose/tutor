@@ -1,0 +1,14 @@
+subject: Arabic
+level: sss
+syllabus: JAMB https://ibass.jamb.gov.ng/static/media/Arabic.233fe7117fc534609a6e.pdf official
+
+Comprehension [J]
+Translation [J]
+Grammar [J]
+  Pronouns: demonstrative, relative and personal [J]
+  Gender, number, dual and plurals [J]
+  Construct phrases and appendants [J]
+  Prepositions [J]
+  Verbs and sentence structure [J]
+Composition [J]
+Arabic Literature [J]

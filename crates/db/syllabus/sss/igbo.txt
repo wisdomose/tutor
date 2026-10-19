@@ -1,0 +1,21 @@
+subject: Igbo
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/IGBO.pdf unofficial
+syllabus: JAMB https://ibass.jamb.gov.ng/static/media/Igbo.7a09449bbeefc39b4f44.pdf official
+
+Language [WJ]
+  Comprehension [WJ]
+  Composition and letter writing [WJ]
+  Sound system and orthography [WJ]
+  Grammar [WJ]
+  Vocabulary and word formation [WJ]
+  Translation [WJ]
+Literature [WJ]
+  Basic principles of literary appreciation [WJ]
+  Oral literature [WJ]
+  Written literature: prose, drama and poetry [WJ]
+Culture [WJ]
+  Customs and traditions [WJ]
+  Social and political institutions [WJ]
+  Beliefs, festivals and ceremonies [WJ]
+  Occupations, arts and crafts [WJ]

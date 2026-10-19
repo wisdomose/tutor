@@ -1,0 +1,10 @@
+subject: GSM Phone Maintenance and Repairs
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/GSM%20PHONES%20MAINTENANCE%20AND%20REPAIRS.pdf unofficial
+
+Introduction to Mobile Phones and Service Providers [W]
+Basic Computer and Internet Concepts [W]
+Components of Mobile Phones and their Functions [W]
+Maintenance and Repair of Mobile Phones [W]
+Troubleshooting [W]
+Setting up and Managing a Mobile Phone Workshop [W]

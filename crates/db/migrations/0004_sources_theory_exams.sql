@@ -17,18 +17,21 @@ delete from pages;
 -- typed in here; the hand-made list from 0001 goes.
 delete from subjects;
 alter table subjects add column level text not null check (level in ('jss', 'sss'));
+-- The syllabus documents a subject's topics were taken from:
+-- [{"body": "WAEC", "url": "...", "official": false}, ...]
+alter table subjects add column syllabuses jsonb not null default '[]';
 alter table subjects drop constraint subjects_name_key;
 alter table subjects add constraint subjects_level_name unique (level, name);
 
--- One tree per subject, from the official syllabus (WAEC for SSS, NERDC for JSS,
--- NECO-only topics added).
+-- One merged tree per subject: WAEC's syllabus is the frame, and topics only
+-- another body's syllabus has (e.g. JAMB) are added into it.
 create table syllabus_topics (
   id uuid primary key default gen_random_uuid(),
   subject_id uuid not null references subjects(id),
   parent_id uuid references syllabus_topics(id),  -- a theme holds topics
   name text not null,
   position int not null default 0,
-  source_url text,
+  bodies text[] not null,                         -- syllabuses that list it: WAEC, JAMB, ...
   unique nulls not distinct (subject_id, parent_id, name)
 );
 

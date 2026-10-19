@@ -1,0 +1,26 @@
+subject: Visual Art
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/VISUAL%20ART.pdf unofficial
+syllabus: JAMB https://ibass.jamb.gov.ng/static/media/Artpdf.85197ba4c495458e1ba8.pdf official
+
+General Knowledge in Art [WJ]
+  Nature, classification and branches of art [WJ]
+  Elements and principles of art and design [WJ]
+  Perspective [W]
+  Art tools and materials [WJ]
+  Art terms [WJ]
+  Inter-relationships of the arts [W]
+History of Art [WJ]
+  Traditional West African art [WJ]
+  Nigerian crafts and modern traditional art [WJ]
+  Contemporary artists, art institutions and organizations [WJ]
+  Cultural festivals and art [W]
+  Western art history [W]
+Artistic Skills and Techniques [WJ]
+  Drawing and painting [WJ]
+  Sculpture, ceramics and crafts [WJ]
+  Graphic design and textiles [WJ]
+Art Appreciation [WJ]
+  Meaning and functions of art [WJ]
+  Art criticism and appreciation [WJ]
+  Art entrepreneurship [J]

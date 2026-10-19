@@ -1,0 +1,11 @@
+subject: Radio, Television and Electronics Works
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/RADIO,TELEVISION%20AND%20ELECTRONICS%20WORKS.pdf unofficial
+
+Workshop Safety Rules and Regulations [W]
+Basic Electricity [W]
+Electronic Tools and Instruments [W]
+Electronic Devices and Circuits [W]
+Electronic Communication Systems [W]
+Workshop Practice and Maintenance [W]
+Entrepreneurship in Radio, Television and Electronics [W]

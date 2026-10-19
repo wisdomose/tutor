@@ -1,0 +1,13 @@
+subject: Refrigeration and Air Conditioning
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/REFRIGERATION%20AND%20AIR%20CONDITIONING.pdf unofficial
+
+Safety and First Aid in the Workshop [W]
+Energy, Matter and Power [W]
+Temperature and Pressure [W]
+Refrigeration and Air Conditioning Systems [W]
+Compressors, Condensers and Evaporators [W]
+Workshop Practices and Tools [W]
+Installation: Piping, Ducting and Wiring [W]
+Insulation Processes [W]
+Entrepreneurship [W]

@@ -1,0 +1,27 @@
+subject: Literature in English
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/LITERATURE%20IN%20ENGLISH.pdf unofficial
+syllabus: JAMB https://ibass.jamb.gov.ng/static/media/Literature.f24a00818658eb8ecbd0.pdf official
+
+Drama [WJ]
+  Types of drama [WJ]
+  Dramatic techniques [WJ]
+  African drama: prescribed texts [WJ]
+  Non-African drama: prescribed texts [WJ]
+Prose [WJ]
+  Types of prose: fiction and non-fiction [WJ]
+  Narrative techniques and point of view [WJ]
+  Characterization [WJ]
+  African prose: prescribed texts [WJ]
+  Non-African prose: prescribed texts [WJ]
+Poetry [WJ]
+  Types of poetry [WJ]
+  Poetic devices: imagery, sound and diction [WJ]
+  African poetry: prescribed poems [WJ]
+  Non-African poetry: prescribed poems [WJ]
+General Literary Principles [WJ]
+  Literary terms and figures of speech [WJ]
+  Theme, plot, setting and socio-political context [WJ]
+Literary Appreciation [WJ]
+  Unseen prose and drama passages [WJ]
+  Unseen poetry [WJ]

@@ -1,0 +1,12 @@
+subject: Painting and Decorating
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/PAINTING%20AND%20DECORATING.pdf unofficial
+
+Introduction to Painting [W]
+Colour Theory [W]
+Techniques in Painting [W]
+Types and Functions of Pictorial Painting [W]
+Types and Functions of Decorative Painting [W]
+Perspective [W]
+Prospects in Painting [W]
+Costing and Marketing of Paintings [W]

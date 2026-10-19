@@ -1,0 +1,11 @@
+subject: Mining
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/MINING.pdf unofficial
+
+Introduction to Mining [W]
+Basic Geology [W]
+Stages of Development in Mining [W]
+Mining Methods [W]
+Introduction to Mineral Processing [W]
+Gemology and Lapidary [W]
+Health, Safety and Environment [W]

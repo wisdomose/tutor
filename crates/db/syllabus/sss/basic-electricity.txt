@@ -1,0 +1,16 @@
+subject: Basic Electricity
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/APPLIED%20ELECTRICITY%20OR%20BASIC%20ELECTRICITY.pdf unofficial
+
+Direct Current Circuit Theory [W]
+Magnetic Field and Electromagnetism [W]
+Measuring Instruments [W]
+Digital Electronics [W]
+Alternating Current Circuit Theory [W]
+Transformers [W]
+Power Supply and Rectification [W]
+Electrical Machines [W]
+Electrical Energy Supply [W]
+Electrical Wiring, Protection and Earthing [W]
+Electricity Transmission and Distribution [W]
+Maintenance and Repair of Electrical Appliances [W]

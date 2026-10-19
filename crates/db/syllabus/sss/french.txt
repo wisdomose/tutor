@@ -1,0 +1,22 @@
+subject: French
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/FRENCH.pdf unofficial
+syllabus: JAMB https://ibass.jamb.gov.ng/static/media/French.170eeaabf96471e303c5.pdf official
+
+Comprehension [WJ]
+  Reading comprehension [WJ]
+  Listening comprehension [W]
+Structure and Use of Written French [WJ]
+  Nouns, pronouns and articles [WJ]
+  Verbs: moods and tenses [WJ]
+  Adjectives and adverbs [WJ]
+  Prepositions and conjunctions [WJ]
+  Vocabulary, synonyms, opposites and faux amis [WJ]
+  Word order and sentence types [WJ]
+Composition [W]
+  Essay writing [W]
+  Letter writing [W]
+Oral French [WJ]
+  French sounds and pronunciation [WJ]
+  Reading aloud and conversation [W]
+Culture and Civilization [J]

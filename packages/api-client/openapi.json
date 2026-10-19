@@ -1541,9 +1541,17 @@
           "id",
           "subject_id",
           "name",
-          "position"
+          "position",
+          "bodies"
         ],
         "properties": {
+          "bodies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Syllabuses that list it: WAEC, JAMB, ..."
+          },
           "id": {
             "type": "string",
             "format": "uuid"

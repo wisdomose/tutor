@@ -1,0 +1,28 @@
+subject: Building Construction
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/BUILDING%20CONSTRUCTION.pdf unofficial
+
+Introduction to Building [W]
+The Building Construction Process [W]
+Safety Practices [W]
+Basic Tools, Equipment and Materials [W]
+Site Clearing and Levelling [W]
+Site Organization and Layout [W]
+Setting Out [W]
+Building Drawing [W]
+Excavation and Earthwork [W]
+Foundations [W]
+Ground Floors [W]
+Suspended Floors [W]
+Concrete [W]
+Walls [W]
+Doors and Windows [W]
+Staircases [W]
+Plumbing Installations [W]
+Electrical Installations [W]
+Roofs [W]
+Finishes [W]
+External Work [W]
+Business Organization and Management [W]
+Book Keeping for Builders [W]
+Contract Work [W]

@@ -1,0 +1,25 @@
+subject: Animal Husbandry
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/ANIMAL%20HUSBANDRY%20(ALT%20B).pdf unofficial
+
+Livestock Production [W]
+  Importance and classification of farm animals [W]
+  Internal organs and body systems of farm animals [W]
+  Reproduction in farm animals and poultry [W]
+  Livestock management systems and practices [W]
+Animal Nutrition [W]
+  Classes of animal feeds [W]
+  Livestock rations and their formulation [W]
+  Processing and marketing of animal products [W]
+Pasture and Range Management [W]
+  Pasture and forage crops [W]
+  Rangeland improvement [W]
+Animal Improvement [W]
+  Methods of farm animal improvement [W]
+  Artificial insemination [W]
+Animal Health [W]
+  Farm animal diseases and pathogens [W]
+  Livestock parasites and pests [W]
+Practical Animal Husbandry [W]
+  Identification of farm animals and their products [W]
+  Tools and equipment for animal management [W]

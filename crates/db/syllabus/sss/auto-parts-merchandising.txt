@@ -1,0 +1,26 @@
+subject: Auto Parts Merchandising
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/AUTO%20PARTS%20MERCHANDISING.pdf unofficial
+
+Automobile Parts [W]
+  Safety in the auto parts shop [W]
+  Engine parts [W]
+  Transmission system parts [W]
+  Suspension, cooling and steering system parts [W]
+  Braking and lubrication system parts [W]
+  Electrical parts [W]
+  Wheels and tyres [W]
+  Tools and their uses [W]
+Storage [W]
+  Storage and cataloguing [W]
+  Visual presentation [W]
+  Inventory and product sourcing [W]
+Sales [W]
+  Sales, invoicing and forecasting [W]
+  Record keeping and sources of finance [W]
+  Market analysis and pricing [W]
+  Advertising and customer service [W]
+  Warranty, guarantee and regulatory bodies [W]
+Entrepreneurship [W]
+  Introduction to auto parts merchandising [W]
+  Personal qualities and ethical business behaviour [W]

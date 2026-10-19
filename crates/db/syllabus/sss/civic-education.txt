@@ -1,0 +1,24 @@
+subject: Civic Education
+level: sss
+syllabus: WAEC https://waecsyllabus.com/files/ssce/CIVIC%20EDUCATION.pdf unofficial
+
+National Ethics, Discipline, Rights and Obligations [W]
+  Values [W]
+  Citizenship and nationalism [W]
+  Human rights [W]
+  Law and order [W]
+  Responsible parenthood [W]
+  Traffic regulations [W]
+  Inter-personal and inter-communal relationships [W]
+Emerging Issues in the Society [W]
+  Cultism [W]
+  Drugs and drug abuse [W]
+  Human trafficking [W]
+  HIV/AIDS [W]
+  Youth empowerment [W]
+Governmental System and Processes [W]
+  Structure and functions of government [W]
+  Democracy, rule of law and national development [W]
+  Political apathy [W]
+  Civil society and popular participation [W]
+  Public service in democracy [W]

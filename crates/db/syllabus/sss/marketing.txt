@@ -1,0 +1,22 @@
+subject: Marketing
+level: sss
+syllabus: WAEC https://waecsyllabus.com/download/ssce/MARKETING.pdf unofficial
+
+Introduction to Marketing [W]
+Marketing Concepts [W]
+Marketing Mix and Marketing Environment [W]
+Products [W]
+Markets [W]
+Consumer and Organizational Behaviour [W]
+Marketing Planning and Research [W]
+Pricing [W]
+Advertising [W]
+Sales Promotion [W]
+Merchandising [W]
+Distribution [W]
+Transportation [W]
+Warehousing [W]
+Market Unions and Associations [W]
+International Marketing [W]
+ICT in Marketing [W]
+Entrepreneurship in Marketing [W]
