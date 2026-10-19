@@ -33,7 +33,8 @@ Not built yet. Replaces the question-bank part of `design-summary.md` and the
 
 ## Reference lists
 
-**subjects** (changed): `level` (`jss` | `sss`), `name`; unique (level, name).
+**subjects** (changed): `level` (`jss` | `sss`), `name`; unique (level, name). Subjects
+are imported with their topics from the official syllabuses, never typed in by hand.
 
 **syllabus_topics** (new): `subject_id`, `parent_id` (theme → topic), `name`,
 `position`, `source_url`.
@@ -79,9 +80,11 @@ we have one.
   The printed tag overrides the source's defaults.
 - Sitting is stored as printed: `may_june` | `june_july` | `nov_dec`.
 - Our questions: `author_id` (→ staff)
-- `topic_id` (→ syllabus_topics). The printed heading is not stored: Claude
-  matches it to the syllabus list while reading, and reviewers can correct the
-  match.
+- `topic_id` (→ syllabus_topics). Every question gets one, whatever the
+  source's layout: Claude picks the syllabus topic from what the question is
+  about. In a topic-grouped book the printed heading is a strong hint; in a
+  year-ordered book or a single paper the question's content is all there is.
+  The heading is not stored, and reviewers can correct the match.
 - `marks` (theory)
 - Unchanged: group, diagram, body, explanation, confidence, second answer,
   review flags.
@@ -108,7 +111,7 @@ page.
 when login arrives.
 
 **question_appearances** (new): `question_id`, `source_id`, `page_id`,
-`number` as printed; unique (source_id, page_id, number). Lets a page that is
+`page_number` and `number` as printed; unique (source_id, page_number, number). Lets a page that is
 uploaded again be recognised, shows reviewers every photo of a question, and
 shows how often an exam repeated it.
 

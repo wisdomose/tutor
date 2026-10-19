@@ -36,6 +36,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exams": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_exams"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/groups/{id}": {
         parameters: {
             query?: never;
@@ -78,7 +94,7 @@ export interface paths {
         };
         get: operations["list_pages"];
         put?: never;
-        /** Upload up to 20 JPEG photos for one subject. Fields: `subject_id`, then one `photos` part per file. */
+        /** Upload up to 20 JPEG photos of one source, in page order. Fields: `source_id`, then one `photos` part per file. */
         post: operations["upload_pages"];
         delete?: never;
         options?: never;
@@ -127,23 +143,6 @@ export interface paths {
             cookie?: never;
         };
         get: operations["list_questions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/questions/topics": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Distinct topics, optionally for one subject. */
-        get: operations["list_topics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -251,6 +250,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_sources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/subjects": {
         parameters: {
             query?: never;
@@ -259,6 +274,23 @@ export interface paths {
             cookie?: never;
         };
         get: operations["list_subjects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/topics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Syllabus topics, optionally for one subject, in syllabus order. */
+        get: operations["list_topics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -301,6 +333,16 @@ export interface components {
         };
         ErrorBody: {
             error: string;
+        };
+        Exam: {
+            /** @description WAEC, NECO, NABTEB or JAMB. */
+            body: string;
+            /** @description WASSCE, SSCE, BECE, NBC or UTME. */
+            code: string;
+            /** Format: uuid */
+            id: string;
+            level: string;
+            name: string;
         };
         GroupEdit: {
             /** @description Student-facing instruction; must not mention question numbers. */
@@ -356,6 +398,9 @@ export interface components {
             processed_at?: string | null;
             /** Format: int64 */
             question_count: number;
+            source: string;
+            /** Format: uuid */
+            source_id: string;
             /** @description queued, processing, done or failed. */
             status: string;
             subject: string;
@@ -378,7 +423,8 @@ export interface components {
              */
             next_flagged_id?: string | null;
             options: components["schemas"]["OptionDetail"][];
-            photo_url: string;
+            /** @description Photo of the page it was first seen on; none for our own questions. */
+            photo_url?: string | null;
             /** @description gpt-6-luna's pick (an option label) and reasoning. */
             second_answer?: string | null;
             second_explanation?: string | null;
@@ -394,7 +440,11 @@ export interface components {
             options: components["schemas"]["OptionEdit"][];
             /** @description Also mark the question as checked. */
             resolve: boolean;
-            topic?: string | null;
+            /**
+             * Format: uuid
+             * @description Syllabus topic; must belong to the question's subject.
+             */
+            topic_id?: string | null;
         };
         QuestionGroup: {
             /**
@@ -416,21 +466,39 @@ export interface components {
         };
         QuestionSummary: {
             body: string;
-            /** @description conflicting_answers, has_diagram, low_confidence, no_answer. */
+            /**
+             * @description conflicting_answers, has_diagram, low_confidence, no_answer, refers_to_number,
+             *     possible_duplicate, source_conflict.
+             */
             check_reasons: string[];
             /** Format: uuid */
             id: string;
+            /** @description objective or theory. */
+            kind: string;
             needs_check: boolean;
             number: string;
+            /** @description source (from a book or paper) or ours (written by the team). */
+            origin: string;
             /** Format: uuid */
-            page_id: string;
+            page_id?: string | null;
             page_number?: string | null;
             /** Format: date-time */
             resolved_at?: string | null;
+            source?: string | null;
+            /**
+             * Format: uuid
+             * @description Where it was first seen; none for our own questions.
+             */
+            source_id?: string | null;
             subject: string;
             /** Format: uuid */
             subject_id: string;
             topic?: string | null;
+            /**
+             * Format: uuid
+             * @description Syllabus topic.
+             */
+            topic_id?: string | null;
         };
         QueueStatus: {
             /** Format: int64 */
@@ -454,10 +522,56 @@ export interface components {
             /** @description What was wrong, e.g. "label III should point to the rhizoids". */
             note?: string | null;
         };
+        Source: {
+            /** Format: date-time */
+            created_at: string;
+            edition?: string | null;
+            /**
+             * Format: uuid
+             * @description Defaults for anything the pages don't print.
+             */
+            exam_id?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description book or paper. */
+            kind: string;
+            /** @description by_topic, by_year or single_paper. */
+            layout: string;
+            level: string;
+            note?: string | null;
+            /** Format: int64 */
+            page_count: number;
+            paper?: string | null;
+            publisher?: string | null;
+            /** @description may_june, june_july or nov_dec. */
+            sitting?: string | null;
+            subject: string;
+            /** Format: uuid */
+            subject_id: string;
+            title: string;
+            /** Format: int32 */
+            year?: number | null;
+        };
         Subject: {
             /** Format: uuid */
             id: string;
+            /** @description jss or sss. */
+            level: string;
             name: string;
+        };
+        Topic: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /**
+             * Format: uuid
+             * @description The theme this topic sits under, if any.
+             */
+            parent_id?: string | null;
+            /** Format: int32 */
+            position: number;
+            /** Format: uuid */
+            subject_id: string;
         };
         UsageSummary: {
             /**
@@ -528,6 +642,25 @@ export interface operations {
             };
         };
     };
+    list_exams: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exam"][];
+                };
+            };
+        };
+    };
     update_group: {
         parameters: {
             query?: never;
@@ -592,6 +725,7 @@ export interface operations {
         parameters: {
             query?: {
                 subject_id?: string;
+                source_id?: string;
                 /** @description queued, processing, done or failed. */
                 status?: string;
                 /** @description Default 50, at most 200. */
@@ -717,7 +851,7 @@ export interface operations {
         parameters: {
             query?: {
                 subject_id?: string;
-                topic?: string;
+                topic_id?: string;
                 page_number?: string;
                 /** @description Searches question and option text. */
                 q?: string;
@@ -737,27 +871,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuestionList"];
-                };
-            };
-        };
-    };
-    list_topics: {
-        parameters: {
-            query?: {
-                subject_id?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string[];
                 };
             };
         };
@@ -942,6 +1055,27 @@ export interface operations {
             };
         };
     };
+    list_sources: {
+        parameters: {
+            query?: {
+                subject_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Source"][];
+                };
+            };
+        };
+    };
     list_subjects: {
         parameters: {
             query?: never;
@@ -957,6 +1091,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Subject"][];
+                };
+            };
+        };
+    };
+    list_topics: {
+        parameters: {
+            query?: {
+                subject_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Topic"][];
                 };
             };
         };

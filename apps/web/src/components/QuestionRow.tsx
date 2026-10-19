@@ -19,7 +19,11 @@ export function QuestionRow({
 			className="rounded-[16px] border-[2.5px] border-ink bg-paper p-3"
 		>
 			<div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-				<Location subject={q.subject} page={q.page_number} number={q.number} />
+				<Location
+					subject={q.source ?? q.subject}
+					page={q.page_number}
+					number={q.number}
+				/>
 				{q.needs_check && !q.resolved_at && (
 					<Reasons reasons={q.check_reasons} />
 				)}

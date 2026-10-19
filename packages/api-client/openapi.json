@@ -77,6 +77,27 @@
         }
       }
     },
+    "/exams": {
+      "get": {
+        "tags": [],
+        "operationId": "list_exams",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Exam"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/groups/{id}": {
       "put": {
         "tags": [],
@@ -172,6 +193,15 @@
             }
           },
           {
+            "name": "source_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "status",
             "in": "query",
             "description": "queued, processing, done or failed.",
@@ -209,7 +239,7 @@
       },
       "post": {
         "tags": [],
-        "summary": "Upload up to 20 JPEG photos for one subject. Fields: `subject_id`, then one `photos` part per file.",
+        "summary": "Upload up to 20 JPEG photos of one source, in page order. Fields: `source_id`, then one `photos` part per file.",
         "operationId": "upload_pages",
         "requestBody": {
           "content": {
@@ -347,11 +377,12 @@
             }
           },
           {
-            "name": "topic",
+            "name": "topic_id",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -398,39 +429,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/QuestionList"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/questions/topics": {
-      "get": {
-        "tags": [],
-        "summary": "Distinct topics, optionally for one subject.",
-        "operationId": "list_topics",
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
                 }
               }
             }
@@ -659,6 +657,38 @@
         }
       }
     },
+    "/sources": {
+      "get": {
+        "tags": [],
+        "operationId": "list_sources",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Source"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/subjects": {
       "get": {
         "tags": [],
@@ -672,6 +702,39 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/Subject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/topics": {
+      "get": {
+        "tags": [],
+        "summary": "Syllabus topics, optionally for one subject, in syllabus order.",
+        "operationId": "list_topics",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Topic"
                   }
                 }
               }
@@ -751,6 +814,36 @@
         ],
         "properties": {
           "error": {
+            "type": "string"
+          }
+        }
+      },
+      "Exam": {
+        "type": "object",
+        "required": [
+          "id",
+          "body",
+          "code",
+          "name",
+          "level"
+        ],
+        "properties": {
+          "body": {
+            "type": "string",
+            "description": "WAEC, NECO, NABTEB or JAMB."
+          },
+          "code": {
+            "type": "string",
+            "description": "WASSCE, SSCE, BECE, NBC or UTME."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "level": {
+            "type": "string"
+          },
+          "name": {
             "type": "string"
           }
         }
@@ -905,6 +998,8 @@
         "type": "object",
         "required": [
           "id",
+          "source_id",
+          "source",
           "subject_id",
           "subject",
           "status",
@@ -957,6 +1052,13 @@
             "type": "integer",
             "format": "int64"
           },
+          "source": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "status": {
             "type": "string",
             "description": "queued, processing, done or failed."
@@ -986,8 +1088,7 @@
           {
             "type": "object",
             "required": [
-              "options",
-              "photo_url"
+              "options"
             ],
             "properties": {
               "confidence": {
@@ -1040,7 +1141,11 @@
                 }
               },
               "photo_url": {
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Photo of the page it was first seen on; none for our own questions."
               },
               "second_answer": {
                 "type": [
@@ -1094,11 +1199,13 @@
             "type": "boolean",
             "description": "Also mark the question as checked."
           },
-          "topic": {
+          "topic_id": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "format": "uuid",
+            "description": "Syllabus topic; must belong to the question's subject."
           }
         }
       },
@@ -1159,9 +1266,10 @@
         "type": "object",
         "required": [
           "id",
+          "kind",
+          "origin",
           "subject_id",
           "subject",
-          "page_id",
           "number",
           "body",
           "needs_check",
@@ -1176,11 +1284,15 @@
             "items": {
               "type": "string"
             },
-            "description": "conflicting_answers, has_diagram, low_confidence, no_answer."
+            "description": "conflicting_answers, has_diagram, low_confidence, no_answer, refers_to_number,\npossible_duplicate, source_conflict."
           },
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "objective or theory."
           },
           "needs_check": {
             "type": "boolean"
@@ -1188,8 +1300,15 @@
           "number": {
             "type": "string"
           },
-          "page_id": {
+          "origin": {
             "type": "string",
+            "description": "source (from a book or paper) or ours (written by the team)."
+          },
+          "page_id": {
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid"
           },
           "page_number": {
@@ -1205,6 +1324,20 @@
             ],
             "format": "date-time"
           },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Where it was first seen; none for our own questions."
+          },
           "subject": {
             "type": "string"
           },
@@ -1217,6 +1350,14 @@
               "string",
               "null"
             ]
+          },
+          "topic_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Syllabus topic."
           }
         }
       },
@@ -1278,11 +1419,129 @@
           }
         }
       },
+      "Source": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "layout",
+          "title",
+          "subject_id",
+          "subject",
+          "level",
+          "page_count",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "edition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "exam_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Defaults for anything the pages don't print."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "book or paper."
+          },
+          "layout": {
+            "type": "string",
+            "description": "by_topic, by_year or single_paper."
+          },
+          "level": {
+            "type": "string"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "page_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "paper": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "publisher": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sitting": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "may_june, june_july or nov_dec."
+          },
+          "subject": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "year": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "Subject": {
         "type": "object",
         "required": [
           "id",
+          "level",
           "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "level": {
+            "type": "string",
+            "description": "jss or sss."
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "Topic": {
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "name",
+          "position"
         ],
         "properties": {
           "id": {
@@ -1291,6 +1550,22 @@
           },
           "name": {
             "type": "string"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The theme this topic sits under, if any."
+          },
+          "position": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "subject_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },

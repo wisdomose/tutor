@@ -52,7 +52,7 @@ function QuestionsPage() {
 		queryKey: ["topics", search.subject ?? null],
 		queryFn: () =>
 			unwrap(
-				api.GET("/questions/topics", {
+				api.GET("/topics", {
 					params: { query: { subject_id: search.subject } },
 				}),
 			),
@@ -66,7 +66,7 @@ function QuestionsPage() {
 					params: {
 						query: {
 							subject_id: search.subject,
-							topic: search.topic,
+							topic_id: search.topic,
 							page_number: search.page,
 							q: search.q,
 							limit: PAGE_SIZE,
@@ -115,8 +115,8 @@ function QuestionsPage() {
 					>
 						<option value="">All topics</option>
 						{topics.data?.map((t) => (
-							<option key={t} value={t}>
-								{t}
+							<option key={t.id} value={t.id}>
+								{t.name}
 							</option>
 						))}
 					</Select>

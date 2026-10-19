@@ -33,9 +33,29 @@ pub fn spawn(state: AppState) {
 #[derive(sqlx::FromRow)]
 struct ClaimedPage {
     id: Uuid,
-    subject_id: Uuid,
     photo_key: String,
     attempts: i32,
+}
+
+/// The source a page belongs to, with the exam defaults its questions start from.
+#[derive(sqlx::FromRow)]
+struct PageSource {
+    source_id: Uuid,
+    subject_id: Uuid,
+    exam_id: Option<Uuid>,
+    year: Option<i32>,
+    paper: Option<String>,
+    sitting: Option<String>,
+}
+
+async fn page_source(db: &PgPool, page_id: Uuid) -> sqlx::Result<PageSource> {
+    sqlx::query_as(
+        "select s.id as source_id, s.subject_id, s.exam_id, s.year, s.paper, s.sitting
+         from pages p join sources s on s.id = p.source_id where p.id = $1",
+    )
+    .bind(page_id)
+    .fetch_one(db)
+    .await
 }
 
 async fn page_loop(state: AppState) {
@@ -77,10 +97,10 @@ async fn claim_page(db: &PgPool) -> sqlx::Result<Option<ClaimedPage>> {
          where id = (
            select id from pages
            where status = 'queued' and (next_attempt_at is null or next_attempt_at <= now())
-           order by uploaded_at
+           order by uploaded_at, position
            limit 1
            for update skip locked)
-         returning id, subject_id, photo_key, attempts",
+         returning id, photo_key, attempts",
     )
     .fetch_optional(db)
     .await
@@ -140,6 +160,7 @@ async fn process_page(state: &AppState, page: ClaimedPage) -> anyhow::Result<()>
 }
 
 async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result<()> {
+    let source = page_source(&state.db, page.id).await?;
     let photo = state
         .storage
         .get(&page.photo_key)
@@ -307,7 +328,7 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
         insert_question(
             &mut tx,
             NewQuestion {
-                subject_id: page.subject_id,
+                source: &source,
                 page_id: page.id,
                 page_number: extraction.page_number.as_deref(),
                 group_id: group.map(|(id, _)| *id),
@@ -317,7 +338,6 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
                     .and_then(|r| diagram_ids.get(r))
                     .copied(),
                 number: &q.number,
-                topic: q.topic.as_deref(),
                 body: &q.body,
                 options,
                 has_diagram,
@@ -411,13 +431,12 @@ struct NewOption {
 }
 
 struct NewQuestion<'a> {
-    subject_id: Uuid,
+    source: &'a PageSource,
     page_id: Uuid,
     page_number: Option<&'a str>,
     group_id: Option<Uuid>,
     diagram_id: Option<Uuid>,
     number: &'a str,
-    topic: Option<&'a str>,
     body: &'a str,
     options: Vec<NewOption>,
     has_diagram: bool,
@@ -426,32 +445,53 @@ struct NewQuestion<'a> {
     luna: Option<&'a Answer>,
 }
 
-/// Inserts a question with its options and flags. Returns false when the same
-/// subject + page + number already exists (a re-uploaded page).
+/// Inserts an objective question with its options, flags and first appearance.
+/// Returns false when the source already has this page + number (a re-uploaded page).
 async fn insert_question(
     tx: &mut Transaction<'_, Postgres>,
     q: NewQuestion<'_>,
 ) -> anyhow::Result<bool> {
+    let src = q.source;
+    if let Some(page_number) = q.page_number {
+        let seen: bool = sqlx::query_scalar(
+            "select exists(select 1 from question_appearances
+               where source_id = $1 and page_number = $2 and number = $3)",
+        )
+        .bind(src.source_id)
+        .bind(page_number)
+        .bind(q.number)
+        .fetch_one(&mut **tx)
+        .await?;
+        if seen {
+            tracing::info!(
+                number = q.number,
+                page_number,
+                "question already saved; skipped"
+            );
+            return Ok(false);
+        }
+    }
     let labels: Vec<&str> = q.options.iter().map(|o| o.label.as_str()).collect();
     let mut verdict = judge(&labels, q.sol, q.luna, q.has_diagram);
     if q.refers_to_number {
         verdict.reasons.push("refers_to_number");
     }
 
-    let id: Option<Uuid> = sqlx::query_scalar(
-        "insert into questions (subject_id, page_id, page_number, group_id, diagram_id, number, topic, body,
-           explanation, confidence, second_answer, second_explanation, needs_check, check_reasons)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-         on conflict (subject_id, page_number, number) where page_number is not null do nothing
+    let id: Uuid = sqlx::query_scalar(
+        "insert into questions (kind, origin, subject_id, source_id, page_id, page_number, group_id, diagram_id,
+           number, body, explanation, confidence, second_answer, second_explanation, needs_check, check_reasons,
+           exam_id, year, paper, sitting)
+         values ('objective', 'source', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+           $15, $16, $17, $18)
          returning id",
     )
-    .bind(q.subject_id)
+    .bind(src.subject_id)
+    .bind(src.source_id)
     .bind(q.page_id)
     .bind(q.page_number)
     .bind(q.group_id)
     .bind(q.diagram_id)
     .bind(q.number)
-    .bind(q.topic)
     .bind(q.body)
     .bind(q.sol.map(|a| a.explanation.as_str()))
     .bind(q.sol.map(|a| a.confidence.as_str()).filter(|c| ["high", "medium", "low"].contains(c)))
@@ -459,12 +499,23 @@ async fn insert_question(
     .bind(q.luna.map(|a| a.explanation.as_str()))
     .bind(!verdict.reasons.is_empty())
     .bind(&verdict.reasons)
-    .fetch_optional(&mut **tx)
+    .bind(src.exam_id)
+    .bind(src.year)
+    .bind(&src.paper)
+    .bind(&src.sitting)
+    .fetch_one(&mut **tx)
     .await?;
-    let Some(id) = id else {
-        tracing::info!(number = q.number, page_number = ?q.page_number, "question already saved; skipped");
-        return Ok(false);
-    };
+    sqlx::query(
+        "insert into question_appearances (question_id, source_id, page_id, page_number, number)
+         values ($1, $2, $3, $4, $5)",
+    )
+    .bind(id)
+    .bind(src.source_id)
+    .bind(q.page_id)
+    .bind(q.page_number)
+    .bind(q.number)
+    .execute(&mut **tx)
+    .await?;
 
     for o in &q.options {
         sqlx::query(
@@ -590,21 +641,20 @@ fn norm_number(n: &str) -> String {
 #[derive(sqlx::FromRow)]
 struct SplitPair {
     first_id: Uuid,
-    subject_id: Uuid,
     first_number: String,
     tail: sqlx::types::Json<TailFragment>,
     head: String,
 }
 
 /// Joins a question cut off at the bottom of page N with the continuation at the
-/// top of page N+1 (same subject), whichever of the two was processed last.
+/// top of page N+1 (same source), whichever of the two was processed last.
 /// The joined question is saved under page N, where it starts.
 async fn join_split_questions(state: &AppState, page_id: Uuid) -> anyhow::Result<()> {
     let pairs: Vec<SplitPair> = sqlx::query_as(
-        "select p.id as first_id, p.subject_id, p.page_number as first_number,
+        "select p.id as first_id, p.page_number as first_number,
                 p.tail_fragment as tail, n.head_fragment as head
          from pages p
-         join pages n on n.subject_id = p.subject_id and n.status = 'done' and n.head_fragment is not null
+         join pages n on n.source_id = p.source_id and n.status = 'done' and n.head_fragment is not null
            and p.page_number ~ '^[0-9]+$' and n.page_number ~ '^[0-9]+$'
            and n.page_number::int = p.page_number::int + 1
          where p.status = 'done' and p.tail_fragment is not null and not p.tail_joined
@@ -661,17 +711,17 @@ async fn join_split_questions(state: &AppState, page_id: Uuid) -> anyhow::Result
         };
         let (sol, luna) = answer_both(state, Some(pair.first_id), &[question]).await?;
 
+        let source = page_source(&state.db, pair.first_id).await?;
         let mut tx = state.db.begin().await?;
         insert_question(
             &mut tx,
             NewQuestion {
-                subject_id: pair.subject_id,
+                source: &source,
                 page_id: pair.first_id,
                 page_number: Some(&pair.first_number),
                 group_id: None,
                 diagram_id: None,
                 number: &tail.number,
-                topic: tail.topic.as_deref(),
                 body: &joined.body,
                 options: joined
                     .options
@@ -704,10 +754,11 @@ async fn join_split_questions(state: &AppState, page_id: Uuid) -> anyhow::Result
 #[derive(sqlx::FromRow)]
 struct ClaimedDiagram {
     id: Uuid,
-    page_id: Uuid,
+    page_id: Option<Uuid>,
     description: String,
     redraw_note: Option<String>,
-    photo_key: String,
+    /// The page photo it was read from; none for our own questions' diagrams.
+    photo_key: Option<String>,
     instruction: Option<String>,
 }
 
@@ -726,7 +777,7 @@ async fn diagram_loop(state: AppState) {
                returning id, page_id, description, redraw_note)
              select d.id, d.page_id, d.description, d.redraw_note, p.photo_key,
                     (select instruction from question_groups g where g.diagram_id = d.id limit 1) as instruction
-             from d join pages p on p.id = d.page_id",
+             from d left join pages p on p.id = d.page_id",
         )
         .fetch_optional(&state.db)
         .await;
@@ -755,7 +806,10 @@ async fn diagram_loop(state: AppState) {
 
 async fn draw(state: &AppState, d: ClaimedDiagram) -> anyhow::Result<()> {
     let openai = state.openai.as_ref().context("OPENAI_API_KEY is not set")?;
-    let photo = B64.encode(state.storage.get(&d.photo_key).await?);
+    let photo = match &d.photo_key {
+        Some(key) => Some(B64.encode(state.storage.get(key).await?)),
+        None => None,
+    };
     let prompt = prompts::draw_prompt(
         &d.description,
         d.instruction.as_deref(),
@@ -765,7 +819,12 @@ async fn draw(state: &AppState, d: ClaimedDiagram) -> anyhow::Result<()> {
         .respond(tutor_openai::Request {
             model: SOL,
             instructions: prompts::DRAW_INSTRUCTIONS,
-            input: vec![Part::Jpeg(&photo), Part::Text(&prompt)],
+            input: photo
+                .as_deref()
+                .map(Part::Jpeg)
+                .into_iter()
+                .chain([Part::Text(&prompt)])
+                .collect(),
             schema_name: "diagram",
             schema: &prompts::DRAW_SCHEMA,
         })
@@ -773,7 +832,7 @@ async fn draw(state: &AppState, d: ClaimedDiagram) -> anyhow::Result<()> {
     log_usage(
         &state.db,
         Usage {
-            page: Some(d.page_id),
+            page: d.page_id,
             diagram: Some(d.id),
             provider: "openai",
             model: SOL,

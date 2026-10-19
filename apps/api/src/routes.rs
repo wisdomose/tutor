@@ -33,6 +33,8 @@ const MAX_PHOTO_BYTES: usize = 8 * 1024 * 1024;
         review_queue,
         list_questions,
         list_topics,
+        list_exams,
+        list_sources,
         get_question,
         update_question,
         resolve_question,
@@ -47,6 +49,9 @@ pub struct ApiDoc;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/subjects", get(list_subjects))
+        .route("/topics", get(list_topics))
+        .route("/exams", get(list_exams))
+        .route("/sources", get(list_sources))
         .route("/queue", get(queue_status))
         .route("/queue/pause", post(pause_queue))
         .route("/queue/resume", post(resume_queue))
@@ -64,7 +69,6 @@ pub fn router() -> Router<AppState> {
         .route("/pages/{id}/photo", get(page_photo))
         .route("/review", get(review_queue))
         .route("/questions", get(list_questions))
-        .route("/questions/topics", get(list_topics))
         .route(
             "/questions/{id}",
             get(get_question)
@@ -119,7 +123,7 @@ fn bad_request(msg: impl Into<String>) -> ApiError {
 type ApiResult<T> = Result<Json<T>, ApiError>;
 
 /// Numeric-aware ordering for printed page and question numbers.
-const QUESTION_ORDER: &str = "s.name,
+const QUESTION_ORDER: &str = "s.name, src.title nulls last,
   (case when q.page_number ~ '^[0-9]+$' then q.page_number::int end) nulls last,
   (case when q.number ~ '^[0-9]+$' then q.number::int end) nulls last, q.number, q.created_at";
 
@@ -128,15 +132,121 @@ const QUESTION_ORDER: &str = "s.name,
 #[derive(Serialize, ToSchema, sqlx::FromRow)]
 pub struct Subject {
     id: Uuid,
+    /// jss or sss.
+    level: String,
     name: String,
 }
 
 #[utoipa::path(get, path = "/subjects", responses((status = 200, body = Vec<Subject>)))]
 async fn list_subjects(State(s): State<AppState>) -> ApiResult<Vec<Subject>> {
     Ok(Json(
-        sqlx::query_as("select id, name from subjects order by name")
+        sqlx::query_as("select id, level, name from subjects order by level desc, name")
             .fetch_all(&s.db)
             .await?,
+    ))
+}
+
+#[derive(Serialize, ToSchema, sqlx::FromRow)]
+pub struct Topic {
+    id: Uuid,
+    subject_id: Uuid,
+    /// The theme this topic sits under, if any.
+    parent_id: Option<Uuid>,
+    name: String,
+    position: i32,
+}
+
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct SubjectFilter {
+    subject_id: Option<Uuid>,
+}
+
+/// Syllabus topics, optionally for one subject, in syllabus order.
+#[utoipa::path(get, path = "/topics", params(SubjectFilter), responses((status = 200, body = Vec<Topic>)))]
+async fn list_topics(
+    State(s): State<AppState>,
+    Query(f): Query<SubjectFilter>,
+) -> ApiResult<Vec<Topic>> {
+    Ok(Json(
+        sqlx::query_as(
+            "select id, subject_id, parent_id, name, position from syllabus_topics
+             where $1::uuid is null or subject_id = $1
+             order by subject_id, position, name",
+        )
+        .bind(f.subject_id)
+        .fetch_all(&s.db)
+        .await?,
+    ))
+}
+
+#[derive(Serialize, ToSchema, sqlx::FromRow)]
+pub struct Exam {
+    id: Uuid,
+    /// WAEC, NECO, NABTEB or JAMB.
+    body: String,
+    /// WASSCE, SSCE, BECE, NBC or UTME.
+    code: String,
+    name: String,
+    level: String,
+}
+
+#[utoipa::path(get, path = "/exams", responses((status = 200, body = Vec<Exam>)))]
+async fn list_exams(State(s): State<AppState>) -> ApiResult<Vec<Exam>> {
+    Ok(Json(
+        sqlx::query_as(
+            "select e.id, b.code as body, e.code, e.name, e.level
+             from exams e join exam_bodies b on b.id = e.body_id order by b.code, e.code",
+        )
+        .fetch_all(&s.db)
+        .await?,
+    ))
+}
+
+// ── Sources ─────────────────────────────────────────────────────────────────
+
+#[derive(Serialize, ToSchema, sqlx::FromRow)]
+pub struct Source {
+    id: Uuid,
+    /// book or paper.
+    kind: String,
+    /// by_topic, by_year or single_paper.
+    layout: String,
+    title: String,
+    publisher: Option<String>,
+    edition: Option<String>,
+    note: Option<String>,
+    subject_id: Uuid,
+    subject: String,
+    level: String,
+    /// Defaults for anything the pages don't print.
+    exam_id: Option<Uuid>,
+    year: Option<i32>,
+    paper: Option<String>,
+    /// may_june, june_july or nov_dec.
+    sitting: Option<String>,
+    page_count: i64,
+    created_at: DateTime<Utc>,
+}
+
+#[utoipa::path(get, path = "/sources", params(SubjectFilter), responses((status = 200, body = Vec<Source>)))]
+async fn list_sources(
+    State(s): State<AppState>,
+    Query(f): Query<SubjectFilter>,
+) -> ApiResult<Vec<Source>> {
+    Ok(Json(
+        sqlx::query_as(
+            "select src.id, src.kind, src.layout, src.title, src.publisher, src.edition, src.note,
+                    src.subject_id, s.name as subject, s.level, src.exam_id, src.year, src.paper,
+                    src.sitting, (select count(*) from pages p where p.source_id = src.id) as page_count,
+                    src.created_at
+             from sources src join subjects s on s.id = src.subject_id
+             where $1::uuid is null or src.subject_id = $1
+             order by src.title",
+        )
+        .bind(f.subject_id)
+        .fetch_all(&s.db)
+        .await?,
     ))
 }
 
@@ -218,6 +328,8 @@ async fn usage_summary(State(s): State<AppState>) -> ApiResult<UsageSummary> {
 #[derive(Serialize, ToSchema, sqlx::FromRow)]
 pub struct PageSummary {
     id: Uuid,
+    source_id: Uuid,
+    source: String,
     subject_id: Uuid,
     subject: String,
     page_number: Option<String>,
@@ -234,21 +346,22 @@ pub struct PageSummary {
     waiting_for_next_page: bool,
 }
 
-const PAGE_SELECT: &str = "select p.id, p.subject_id, s.name as subject, p.page_number, p.status, p.error, p.attempts,
+const PAGE_SELECT: &str = "select p.id, p.source_id, src.title as source, src.subject_id, s.name as subject, p.page_number, p.status, p.error, p.attempts,
     p.next_attempt_at, p.uploaded_at, p.processed_at,
-    (select count(*) from questions q where q.page_id = p.id) as question_count,
-    (select count(*) from questions q where q.page_id = p.id and q.needs_check and q.resolved_at is null) as flagged_count,
+    (select count(*) from question_appearances a where a.page_id = p.id) as question_count,
+    (select count(*) from question_appearances a join questions q on q.id = a.question_id
+       where a.page_id = p.id and q.needs_check and q.resolved_at is null) as flagged_count,
     (p.tail_fragment is not null and not p.tail_joined) as waiting_for_next_page
-  from pages p join subjects s on s.id = p.subject_id";
+  from pages p join sources src on src.id = p.source_id join subjects s on s.id = src.subject_id";
 
-/// Upload up to 20 JPEG photos for one subject. Fields: `subject_id`, then one `photos` part per file.
+/// Upload up to 20 JPEG photos of one source, in page order. Fields: `source_id`, then one `photos` part per file.
 #[utoipa::path(post, path = "/pages", request_body(content_type = "multipart/form-data"),
     responses((status = 200, body = Vec<PageSummary>), (status = 400, body = ErrorBody)))]
 async fn upload_pages(
     State(s): State<AppState>,
     mut form: Multipart,
 ) -> ApiResult<Vec<PageSummary>> {
-    let mut subject_id: Option<Uuid> = None;
+    let mut source_id: Option<Uuid> = None;
     let mut photos = Vec::new();
     while let Some(field) = form
         .next_field()
@@ -256,12 +369,12 @@ async fn upload_pages(
         .map_err(|e| bad_request(e.to_string()))?
     {
         match field.name() {
-            Some("subject_id") => {
+            Some("source_id") => {
                 let text = field.text().await.map_err(|e| bad_request(e.to_string()))?;
-                subject_id = Some(
+                source_id = Some(
                     text.trim()
                         .parse()
-                        .map_err(|_| bad_request("invalid subject_id"))?,
+                        .map_err(|_| bad_request("invalid source_id"))?,
                 );
             }
             Some("photos") => {
@@ -280,18 +393,18 @@ async fn upload_pages(
             _ => {}
         }
     }
-    let subject_id = subject_id.ok_or_else(|| bad_request("subject_id is required"))?;
+    let source_id = source_id.ok_or_else(|| bad_request("source_id is required"))?;
     if photos.is_empty() || photos.len() > MAX_PHOTOS {
         return Err(bad_request(format!(
             "send between 1 and {MAX_PHOTOS} photos"
         )));
     }
-    let exists: bool = sqlx::query_scalar("select exists(select 1 from subjects where id = $1)")
-        .bind(subject_id)
+    let exists: bool = sqlx::query_scalar("select exists(select 1 from sources where id = $1)")
+        .bind(source_id)
         .fetch_one(&s.db)
         .await?;
     if !exists {
-        return Err(bad_request("unknown subject"));
+        return Err(bad_request("unknown source"));
     }
 
     let mut ids = Vec::new();
@@ -299,17 +412,35 @@ async fn upload_pages(
         let id = Uuid::new_v4();
         let key = format!("pages/{id}.jpg");
         s.storage.put(&key, photo).await?;
-        sqlx::query("insert into pages (id, subject_id, photo_key) values ($1, $2, $3)")
-            .bind(id)
-            .bind(subject_id)
-            .bind(&key)
-            .execute(&s.db)
+        let mut tx = s.db.begin().await?;
+        // Lock the source so concurrent uploads can't take the same position.
+        sqlx::query("select 1 from sources where id = $1 for update")
+            .bind(source_id)
+            .execute(&mut *tx)
             .await?;
+        let upload_id: Uuid = sqlx::query_scalar(
+            "insert into uploads (source_id, kind, file_key) values ($1, 'photo', $2) returning id",
+        )
+        .bind(source_id)
+        .bind(&key)
+        .fetch_one(&mut *tx)
+        .await?;
+        sqlx::query(
+            "insert into pages (id, source_id, upload_id, photo_key, position)
+             values ($1, $2, $3, $4, (select coalesce(max(position), 0) + 1 from pages where source_id = $2))",
+        )
+        .bind(id)
+        .bind(source_id)
+        .bind(upload_id)
+        .bind(&key)
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
         ids.push(id);
     }
     Ok(Json(
         sqlx::query_as(&format!(
-            "{PAGE_SELECT} where p.id = any($1) order by p.uploaded_at"
+            "{PAGE_SELECT} where p.id = any($1) order by p.position"
         ))
         .bind(&ids)
         .fetch_all(&s.db)
@@ -321,6 +452,7 @@ async fn upload_pages(
 #[into_params(parameter_in = Query)]
 pub struct PageFilter {
     subject_id: Option<Uuid>,
+    source_id: Option<Uuid>,
     /// queued, processing, done or failed.
     status: Option<String>,
     /// Default 50, at most 200.
@@ -334,12 +466,14 @@ async fn list_pages(
 ) -> ApiResult<Vec<PageSummary>> {
     Ok(Json(
         sqlx::query_as(&format!(
-            "{PAGE_SELECT} where ($1::uuid is null or p.subject_id = $1) and ($2::text is null or p.status = $2)
-             order by p.uploaded_at desc limit $3"
+            "{PAGE_SELECT} where ($1::uuid is null or src.subject_id = $1) and ($2::text is null or p.status = $2)
+               and ($4::uuid is null or p.source_id = $4)
+             order by p.uploaded_at desc, p.position desc limit $3"
         ))
         .bind(f.subject_id)
         .bind(f.status)
         .bind(f.limit.unwrap_or(50).clamp(1, 200))
+        .bind(f.source_id)
         .fetch_all(&s.db)
         .await?,
     ))
@@ -368,7 +502,8 @@ async fn get_page(State(s): State<AppState>, Path(id): Path<Uuid>) -> ApiResult<
     .fetch_one(&s.db)
     .await?;
     let questions = sqlx::query_as(&format!(
-        "{QUESTION_SELECT} where q.page_id = $1 order by {QUESTION_ORDER}"
+        "{QUESTION_SELECT} where q.id in (select question_id from question_appearances where page_id = $1)
+         order by {QUESTION_ORDER}"
     ))
     .bind(id)
     .fetch_all(&s.db)
@@ -399,6 +534,10 @@ async fn page_photo(State(s): State<AppState>, Path(id): Path<Uuid>) -> Result<R
 
 /// Removes a page's questions, groups and diagrams (not the page or photo).
 async fn clear_page(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: Uuid) -> sqlx::Result<()> {
+    sqlx::query("delete from question_appearances where page_id = $1")
+        .bind(id)
+        .execute(&mut **tx)
+        .await?;
     sqlx::query("delete from questions where page_id = $1")
         .bind(id)
         .execute(&mut **tx)
@@ -467,23 +606,35 @@ async fn delete_page(
 #[derive(Serialize, ToSchema, sqlx::FromRow)]
 pub struct QuestionSummary {
     id: Uuid,
+    /// objective or theory.
+    kind: String,
+    /// source (from a book or paper) or ours (written by the team).
+    origin: String,
     subject_id: Uuid,
     subject: String,
-    page_id: Uuid,
+    /// Where it was first seen; none for our own questions.
+    source_id: Option<Uuid>,
+    source: Option<String>,
+    page_id: Option<Uuid>,
     page_number: Option<String>,
     number: String,
+    /// Syllabus topic.
+    topic_id: Option<Uuid>,
     topic: Option<String>,
     body: String,
     needs_check: bool,
-    /// conflicting_answers, has_diagram, low_confidence, no_answer.
+    /// conflicting_answers, has_diagram, low_confidence, no_answer, refers_to_number,
+    /// possible_duplicate, source_conflict.
     check_reasons: Vec<String>,
     resolved_at: Option<DateTime<Utc>>,
 }
 
-const QUESTION_SELECT: &str =
-    "select q.id, q.subject_id, s.name as subject, q.page_id, q.page_number, q.number, q.topic,
+const QUESTION_SELECT: &str = "select q.id, q.kind, q.origin, q.subject_id, s.name as subject,
+    q.source_id, src.title as source, q.page_id, q.page_number, q.number, q.topic_id, t.name as topic,
     q.body, q.needs_check, q.check_reasons, q.resolved_at
-  from questions q join subjects s on s.id = q.subject_id";
+  from questions q join subjects s on s.id = q.subject_id
+    left join sources src on src.id = q.source_id
+    left join syllabus_topics t on t.id = q.topic_id";
 
 #[derive(Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
@@ -520,7 +671,7 @@ async fn review_queue(
 #[into_params(parameter_in = Query)]
 pub struct QuestionFilter {
     subject_id: Option<Uuid>,
-    topic: Option<String>,
+    topic_id: Option<Uuid>,
     page_number: Option<String>,
     /// Searches question and option text.
     q: Option<String>,
@@ -535,14 +686,14 @@ async fn list_questions(
     Query(f): Query<QuestionFilter>,
 ) -> ApiResult<QuestionList> {
     let filter = "where ($1::uuid is null or q.subject_id = $1)
-        and ($2::text is null or q.topic = $2)
+        and ($2::uuid is null or q.topic_id = $2)
         and ($3::text is null or q.page_number = $3)
         and ($4::text is null or q.body ilike '%' || $4 || '%'
              or exists (select 1 from options o where o.question_id = q.id and o.body ilike '%' || $4 || '%'))";
     let search = f.q.as_deref().map(str::trim).filter(|q| !q.is_empty());
     let total: i64 = sqlx::query_scalar(&format!("select count(*) from questions q {filter}"))
         .bind(f.subject_id)
-        .bind(&f.topic)
+        .bind(f.topic_id)
         .bind(&f.page_number)
         .bind(search)
         .fetch_one(&s.db)
@@ -551,7 +702,7 @@ async fn list_questions(
         "{QUESTION_SELECT} {filter} order by {QUESTION_ORDER} limit $5 offset $6"
     ))
     .bind(f.subject_id)
-    .bind(&f.topic)
+    .bind(f.topic_id)
     .bind(&f.page_number)
     .bind(search)
     .bind(f.limit.unwrap_or(50).clamp(1, 200))
@@ -559,23 +710,6 @@ async fn list_questions(
     .fetch_all(&s.db)
     .await?;
     Ok(Json(QuestionList { total, items }))
-}
-
-/// Distinct topics, optionally for one subject.
-#[utoipa::path(get, path = "/questions/topics", params(ReviewFilter), responses((status = 200, body = Vec<String>)))]
-async fn list_topics(
-    State(s): State<AppState>,
-    Query(f): Query<ReviewFilter>,
-) -> ApiResult<Vec<String>> {
-    Ok(Json(
-        sqlx::query_scalar(
-            "select distinct topic from questions where topic is not null and ($1::uuid is null or subject_id = $1)
-             order by topic",
-        )
-        .bind(f.subject_id)
-        .fetch_all(&s.db)
-        .await?,
-    ))
 }
 
 #[derive(Serialize, ToSchema, sqlx::FromRow)]
@@ -615,7 +749,8 @@ pub struct QuestionDetail {
     /// The question's own diagram, or the shared one from its group.
     diagram: Option<Diagram>,
     options: Vec<OptionDetail>,
-    photo_url: String,
+    /// Photo of the page it was first seen on; none for our own questions.
+    photo_url: Option<String>,
     /// Next flagged, unresolved question in book order (for "Looks right → next").
     next_flagged_id: Option<Uuid>,
 }
@@ -700,6 +835,7 @@ async fn question_detail(s: &AppState, id: Uuid) -> Result<QuestionDetail, ApiEr
         "with ordered as (
            select q.id, row_number() over (order by {QUESTION_ORDER}) as n
            from questions q join subjects s on s.id = q.subject_id
+             left join sources src on src.id = q.source_id
            where (q.needs_check and q.resolved_at is null) or q.id = $1)
          select id from ordered
          where n > (select n from ordered where id = $1)
@@ -708,7 +844,7 @@ async fn question_detail(s: &AppState, id: Uuid) -> Result<QuestionDetail, ApiEr
     .bind(id)
     .fetch_optional(&s.db)
     .await?;
-    let photo_url = format!("/pages/{}/photo", summary.page_id);
+    let photo_url = summary.page_id.map(|p| format!("/pages/{p}/photo"));
     Ok(QuestionDetail {
         summary,
         explanation: extra.explanation,
@@ -732,7 +868,8 @@ pub struct OptionEdit {
 #[derive(Deserialize, ToSchema)]
 pub struct QuestionEdit {
     body: String,
-    topic: Option<String>,
+    /// Syllabus topic; must belong to the question's subject.
+    topic_id: Option<Uuid>,
     explanation: Option<String>,
     options: Vec<OptionEdit>,
     /// The option to mark correct; null leaves the question without an answer.
@@ -752,20 +889,30 @@ async fn update_question(
     if edit.body.trim().is_empty() {
         return Err(bad_request("the question text can't be empty"));
     }
+    if let Some(topic_id) = edit.topic_id {
+        let fits: bool = sqlx::query_scalar(
+            "select exists(select 1 from syllabus_topics t join questions q on q.subject_id = t.subject_id
+               where t.id = $1 and q.id = $2)",
+        )
+        .bind(topic_id)
+        .bind(id)
+        .fetch_one(&s.db)
+        .await?;
+        if !fits {
+            return Err(bad_request(
+                "topic_id is not a topic of this question's subject",
+            ));
+        }
+    }
     let mut tx = s.db.begin().await?;
     sqlx::query(
-        "update questions set body = $2, topic = $3, explanation = $4,
+        "update questions set body = $2, topic_id = $3, explanation = $4,
            resolved_at = case when $5 then now() else resolved_at end
          where id = $1",
     )
     .bind(id)
     .bind(edit.body.trim())
-    .bind(
-        edit.topic
-            .as_deref()
-            .map(str::trim)
-            .filter(|t| !t.is_empty()),
-    )
+    .bind(edit.topic_id)
     .bind(
         edit.explanation
             .as_deref()

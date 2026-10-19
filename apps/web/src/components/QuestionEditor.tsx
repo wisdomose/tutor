@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { PagePhoto } from "./PagePhoto";
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { Diagram, QuestionDetail, QuestionGroup } from "@tutor/api-client";
 import { useState } from "react";
 import { api, apiPath, unwrap } from "#/lib/api";
 import { MathText } from "./MathText";
+import { PagePhoto } from "./PagePhoto";
 import { Reasons } from "./Reasons";
 import {
 	Button,
@@ -15,6 +15,7 @@ import {
 	Field,
 	Label,
 	Location,
+	Select,
 	Spinner,
 	TextArea,
 	TextInput,
@@ -56,7 +57,14 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 	const qc = useQueryClient();
 	const navigate = useNavigate();
 	const [body, setBody] = useState(q.body);
-	const [topic, setTopic] = useState(q.topic ?? "");
+	const [topicId, setTopicId] = useState(q.topic_id ?? "");
+	const topics = useQuery({
+		queryKey: ["topics", q.subject_id],
+		queryFn: () =>
+			unwrap(
+				api.GET("/topics", { params: { query: { subject_id: q.subject_id } } }),
+			),
+	});
 	const [explanation, setExplanation] = useState(q.explanation ?? "");
 	const [options, setOptions] = useState(() =>
 		q.options.map((o) => ({ id: o.id, body: o.body ?? "" })),
@@ -73,7 +81,7 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 					params: { path: { id: q.id } },
 					body: {
 						body,
-						topic: topic || null,
+						topic_id: topicId || null,
 						explanation: explanation || null,
 						options: options.map((o) => ({
 							id: o.id,
@@ -126,23 +134,35 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 	return (
 		<>
 			<div className="flex flex-wrap items-center gap-2">
-				<Location subject={q.subject} page={q.page_number} number={q.number} />
+				<Location
+					subject={q.source ?? q.subject}
+					page={q.page_number}
+					number={q.number}
+				/>
 				{q.needs_check && !resolved && <Reasons reasons={q.check_reasons} />}
 				{resolved && <Chip fill="lime">Checked</Chip>}
 			</div>
 
 			<div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
 				{/* Original photo, to compare with the book */}
-				<div className="flex flex-col gap-2">
-					<PagePhoto pageId={q.page_id} url={q.photo_url} alt="Original page" />
-					<Link
-						to="/uploads/$pageId"
-						params={{ pageId: q.page_id }}
-						className="text-sm font-extrabold underline"
-					>
-						All questions on this page
-					</Link>
-				</div>
+				{q.page_id && q.photo_url ? (
+					<div className="flex flex-col gap-2">
+						<PagePhoto
+							pageId={q.page_id}
+							url={q.photo_url}
+							alt="Original page"
+						/>
+						<Link
+							to="/uploads/$pageId"
+							params={{ pageId: q.page_id }}
+							className="text-sm font-extrabold underline"
+						>
+							All questions on this page
+						</Link>
+					</div>
+				) : (
+					<div />
+				)}
 
 				<div className="flex flex-col gap-4">
 					{q.group && (
@@ -255,11 +275,22 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 						/>
 					</Field>
 					<Field label="Topic">
-						<TextInput
-							value={topic}
-							onChange={(e) => setTopic(e.target.value)}
-							placeholder="e.g. Levels of Organization"
-						/>
+						<Select
+							value={topicId}
+							onChange={(e) => setTopicId(e.target.value)}
+							disabled={!topics.data?.length}
+						>
+							<option value="">
+								{topics.data?.length
+									? "No topic"
+									: "No syllabus topics for this subject yet"}
+							</option>
+							{topics.data?.map((t) => (
+								<option key={t.id} value={t.id}>
+									{t.name}
+								</option>
+							))}
+						</Select>
 					</Field>
 
 					{(save.error || remove.error) && (
