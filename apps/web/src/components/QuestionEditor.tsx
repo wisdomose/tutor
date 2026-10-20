@@ -216,7 +216,7 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 				{resolved && <Chip fill="lime">Checked</Chip>}
 			</div>
 
-			<div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+			<div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
 				<PhotoPanel q={q} />
 
 				<div className="flex flex-col gap-4">
@@ -253,11 +253,7 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 							placeholder={theory ? "None — the question starts at (a)" : ""}
 						/>
 					</Field>
-					{body.includes("$") && (
-						<div className="-mt-2 rounded-[13px] border-2 border-dashed border-ink px-3 py-2 text-[15px] font-bold">
-							<MathText text={body} />
-						</div>
-					)}
+					<MathPreview text={body} />
 
 					{theory ? (
 						<PartsEditor
@@ -310,6 +306,7 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 													)
 												}
 											/>
+											<MathPreview text={options[i].body} />
 											{o.diagram && (
 												<DiagramPanel
 													diagram={o.diagram}
@@ -360,6 +357,7 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 							/>
 						</Field>
 					)}
+					{!theory && <MathPreview text={explanation} />}
 					<Field label="Topic">
 						<Select
 							value={topicId}
@@ -618,6 +616,7 @@ function PartsEditor({
 							placeholder="(only sub-parts)"
 							onChange={(e) => onChange(i, { body: e.target.value })}
 						/>
+						<MathPreview text={parts[i].body} />
 						{closing.has(p.id) ? (
 							<Field label="After its sub-parts">
 								<TextArea
@@ -967,5 +966,15 @@ function DiagramPanel({
 				</div>
 			)}
 		</Card>
+	);
+}
+
+/** The rendered form of text containing maths, under the field that edits it. */
+function MathPreview({ text }: { text: string }) {
+	if (!text.includes("$")) return null;
+	return (
+		<div className="rounded-[10px] border-2 border-dashed border-ink px-3 py-2 text-[15px] font-bold">
+			<MathText text={text} />
+		</div>
 	);
 }

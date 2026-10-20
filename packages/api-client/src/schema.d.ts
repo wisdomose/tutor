@@ -333,8 +333,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Stores a PDF of one source as uploaded. Its pages are rendered by the browser and sent
-         *     to `POST /pages` with this upload's id. Fields: `source_id`, `pdf`.
+         * Registers a PDF of one source. Its pages are rendered by the browser and sent to
+         *     `POST /pages` with this upload's id. Fields: `source_id`, then `pdf` (the file, kept
+         *     as uploaded) or just `name` for a PDF too large to send in one request.
          */
         post: operations["upload_pdf"];
         delete?: never;
@@ -628,6 +629,8 @@ export interface components {
              *     possible_duplicate, source_conflict.
              */
             check_reasons: string[];
+            /** @description "(a) What is classification…": a list preview for theory questions with no lead text. */
+            first_part?: string | null;
             /** Format: uuid */
             id: string;
             /** @description objective or theory. */

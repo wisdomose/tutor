@@ -832,7 +832,7 @@
     "/uploads/pdf": {
       "post": {
         "tags": [],
-        "summary": "Stores a PDF of one source as uploaded. Its pages are rendered by the browser and sent\nto `POST /pages` with this upload's id. Fields: `source_id`, `pdf`.",
+        "summary": "Registers a PDF of one source. Its pages are rendered by the browser and sent to\n`POST /pages` with this upload's id. Fields: `source_id`, then `pdf` (the file, kept\nas uploaded) or just `name` for a PDF too large to send in one request.",
         "operationId": "upload_pdf",
         "requestBody": {
           "content": {
@@ -1753,6 +1753,13 @@
               "type": "string"
             },
             "description": "conflicting_answers, has_diagram, low_confidence, no_answer, refers_to_number,\npossible_duplicate, source_conflict."
+          },
+          "first_part": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "\"(a) What is classification…\": a list preview for theory questions with no lead text."
           },
           "id": {
             "type": "string",

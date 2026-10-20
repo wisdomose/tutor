@@ -31,9 +31,32 @@ export function QuestionRow({
 				{q.resolved_at && <Chip fill="lime">Checked</Chip>}
 			</div>
 			<MathText
-				text={q.body}
-				className="line-clamp-2 text-[15px] leading-snug font-bold"
+				text={preview(q.body || q.first_part || "")}
+				className="block text-[15px] leading-snug font-bold"
 			/>
 		</Link>
 	);
+}
+
+const PREVIEW_CHARS = 140;
+
+/**
+ * Shortens a question for a list. It's cut between words, never inside an equation:
+ * a CSS line clamp slices rendered maths and leaves stray subscripts behind.
+ */
+function preview(text: string) {
+	if (text.length <= PREVIEW_CHARS) return text;
+	let out = "";
+	for (const part of text.split(/(\$[^$]+\$)/g)) {
+		if (out.length + part.length <= PREVIEW_CHARS) {
+			out += part;
+			continue;
+		}
+		if (!part.startsWith("$")) {
+			const room = part.slice(0, PREVIEW_CHARS - out.length);
+			out += room.slice(0, Math.max(0, room.lastIndexOf(" ")));
+		}
+		break;
+	}
+	return `${out.trimEnd()}…`;
 }

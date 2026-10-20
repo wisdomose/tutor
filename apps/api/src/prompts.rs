@@ -16,7 +16,9 @@ Reading the page:
 - Extract every question: multiple-choice (\"objective\", usually under OBJ) and written (\"theory\", under THEORY, ESSAY or Paper 2/3). Use question numbers exactly as printed, even when misnumbered.
 - Copy question and option text exactly as printed, fixing only line-break hyphenation. Never paraphrase, correct the wording, or add words that are not printed.
 - Options are often printed inline (\"A. fish. B. reptile. C. ...\"). Split them into separate options and drop the full stop that only separates them.
-- Write mathematics and chemical formulae in LaTeX between $...$ (e.g. $H_2SO_4$, $\\frac{1}{2}mv^2$).
+- Write mathematics in LaTeX between $...$ (e.g. $\\frac{1}{2}mv^2$, $3.6 \\times 10^{-3}$).
+- Write chemistry with mhchem's \\ce inside $...$: formulae, ions, equations with states and nuclide symbols (e.g. $\\ce{H2SO4}$, $\\ce{Ca(OCl)2}$, $\\ce{M^3+}$, $\\ce{CaCO3(s) + 2HCl(aq) -> CaCl2(aq) + H2O(l) + CO2(g)}$, $\\ce{^{45}_{21}X}$). Element symbols must never be written as plain maths.
+- Write units upright: $22.4\\,\\mathrm{dm^3}$, $\\mathrm{mol\\,dm^{-3}}$, $6.02 \\times 10^{23}\\,\\mathrm{mol^{-1}}$.
 - \"page_number\" is the page number printed on the paper (often in a corner), not a question number. Null if not visible.
 
 Theory questions:
@@ -317,7 +319,7 @@ pub struct ExtractedPart {
 
 // ── Joining a question split across two pages (gpt-6.1-sol, text only) ───────
 
-pub const JOIN_INSTRUCTIONS: &str = "A question from a printed exam book was split across two pages. You get its kind, the text from the bottom of the first page and the continuation from the top of the next. Join them into one question and copy the text exactly (only remove the break); write maths in LaTeX between $...$; do not answer it.
+pub const JOIN_INSTRUCTIONS: &str = "A question from a printed exam book was split across two pages. You get its kind, the text from the bottom of the first page and the continuation from the top of the next. Join them into one question and copy the text exactly (only remove the break); write maths in LaTeX between $...$, chemistry with mhchem ($\\ce{CO2(g)}$) and units upright ($\\mathrm{dm^3}$); do not answer it.
 - objective: split the options A-E into separate options; no parts.
 - theory: \"body\" is the lead text before the first lettered part; each part goes in \"parts\" with its path (\"a\", \"a/ii\"), its own text, any closing sentence that belongs to it, and its printed marks; no options.
 - A tag such as [2012/1] is the year and the question's number in that exam: put them in \"year\" and \"original_number\" (null if there is no tag) and leave the tag out of the text.";

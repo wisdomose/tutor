@@ -879,6 +879,8 @@ pub struct QuestionSummary {
     topic_id: Option<Uuid>,
     topic: Option<String>,
     body: String,
+    /// "(a) What is classification…": a list preview for theory questions with no lead text.
+    first_part: Option<String>,
     needs_check: bool,
     /// conflicting_answers, has_diagram, low_confidence, no_answer, refers_to_number,
     /// possible_duplicate, source_conflict.
@@ -888,7 +890,10 @@ pub struct QuestionSummary {
 
 const QUESTION_SELECT: &str = "select q.id, q.kind, q.origin, q.subject_id, s.name as subject,
     q.source_id, src.title as source, q.page_id, q.page_number, q.number, q.topic_id, t.name as topic,
-    q.body, q.needs_check, q.check_reasons, q.resolved_at
+    q.body,
+    (select '(' || p.label || ') ' || p.body from question_parts p
+       where p.question_id = q.id and p.body is not null order by p.position limit 1) as first_part,
+    q.needs_check, q.check_reasons, q.resolved_at
   from questions q join subjects s on s.id = q.subject_id
     left join sources src on src.id = q.source_id
     left join syllabus_topics t on t.id = q.topic_id";
