@@ -1,4 +1,5 @@
 // Sticker-style building blocks. See docs/design/README.md.
+import { ChevronDown, type LucideIcon } from "lucide-react";
 import type {
 	ButtonHTMLAttributes,
 	InputHTMLAttributes,
@@ -23,12 +24,15 @@ export const cx = (...parts: (string | false | undefined)[]) =>
 export function Button({
 	fill = "lime",
 	size = "md",
+	icon: Icon,
 	className,
 	children,
 	...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
 	fill?: Fill;
 	size?: "sm" | "md";
+	/** Shown before the label, in the label's colour. */
+	icon?: LucideIcon;
 }) {
 	const radius = size === "sm" ? "rounded-[13px]" : "rounded-[16px]";
 	return (
@@ -48,8 +52,16 @@ export function Button({
 					radius,
 					fills[fill],
 					size === "sm" ? "px-3.5 py-2 text-sm" : "px-5 py-3.5 text-lg",
+					Icon && "flex items-center justify-center gap-2",
 				)}
 			>
+				{Icon && (
+					<Icon
+						aria-hidden="true"
+						className={cx("shrink-0", size === "sm" ? "size-4" : "size-5")}
+						strokeWidth={2.75}
+					/>
+				)}
 				{children}
 			</span>
 		</button>
@@ -199,18 +211,11 @@ export function Select({
 				{...props}
 				className={cx(control, "cursor-pointer appearance-none truncate pr-10")}
 			/>
-			<svg
+			<ChevronDown
 				aria-hidden="true"
-				viewBox="0 0 24 24"
 				className="pointer-events-none absolute top-1/2 right-3 size-5 -translate-y-1/2"
-				fill="none"
-				stroke="currentColor"
 				strokeWidth={3}
-				strokeLinecap="round"
-				strokeLinejoin="round"
-			>
-				<path d="m6 9 6 6 6-6" />
-			</svg>
+			/>
 		</div>
 	);
 }

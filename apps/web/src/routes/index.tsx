@@ -1,6 +1,16 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+	BookOpen,
+	Camera,
+	FileText,
+	Images,
+	PenLine,
+	Plus,
+	Upload,
+	X,
+} from "lucide-react";
+import {
 	type ChangeEvent,
 	type ReactNode,
 	useEffect,
@@ -237,6 +247,21 @@ function UploadPage() {
 							/>
 						) : source && !changing ? (
 							<div className="flex items-start gap-3 rounded-[14px] border-[2.5px] border-ink bg-paper px-3 py-2.5">
+								<div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[10px] border-2 border-ink bg-lavender-soft">
+									{source.kind === "paper" ? (
+										<FileText
+											aria-hidden="true"
+											className="size-5"
+											strokeWidth={2.5}
+										/>
+									) : (
+										<BookOpen
+											aria-hidden="true"
+											className="size-5"
+											strokeWidth={2.5}
+										/>
+									)}
+								</div>
 								<div className="min-w-0 flex-1">
 									<div className="font-display text-lg leading-tight font-extrabold">
 										{source.title}
@@ -254,8 +279,13 @@ function UploadPage() {
 									type="button"
 									disabled={progress !== null}
 									onClick={() => setChanging(true)}
-									className="text-xs font-extrabold underline"
+									className="flex items-center gap-1 text-xs font-extrabold underline"
 								>
+									<PenLine
+										aria-hidden="true"
+										className="size-3.5"
+										strokeWidth={2.75}
+									/>
 									Change
 								</button>
 							</div>
@@ -288,9 +318,14 @@ function UploadPage() {
 									<button
 										type="button"
 										onClick={() => setAdding(true)}
-										className="text-sm font-extrabold underline"
+										className="flex items-center gap-1 text-sm font-extrabold underline"
 									>
-										+ Add a new book or paper
+										<Plus
+											aria-hidden="true"
+											className="size-4"
+											strokeWidth={3}
+										/>
+										Add a new book or paper
 									</button>
 									{source && (
 										<button
@@ -324,6 +359,11 @@ function UploadPage() {
 								</p>
 							) : pdf ? (
 								<div className="flex items-center gap-3 rounded-[14px] border-[2.5px] border-ink bg-paper px-3 py-2.5">
+									<FileText
+										aria-hidden="true"
+										className="size-6 shrink-0"
+										strokeWidth={2.5}
+									/>
 									<div className="min-w-0 flex-1">
 										<div className="truncate text-sm font-extrabold">
 											{pdf.file.name}
@@ -368,9 +408,18 @@ function UploadPage() {
 												aria-label="Take another photo"
 												disabled={progress !== null}
 												onClick={() => cameraInput.current?.click()}
-												className="flex aspect-[3/4] items-center justify-center rounded-[10px] border-2 border-dashed border-ink font-display text-2xl font-extrabold"
+												className="flex aspect-[3/4] flex-col items-center justify-center gap-1 rounded-[10px] border-2 border-dashed border-ink"
 											>
-												+
+												<Camera
+													aria-hidden="true"
+													className="size-6"
+													strokeWidth={2.5}
+												/>
+												<Plus
+													aria-hidden="true"
+													className="size-4"
+													strokeWidth={3}
+												/>
 											</button>
 										)}
 									</div>
@@ -379,15 +428,23 @@ function UploadPage() {
 											type="button"
 											disabled={progress !== null}
 											onClick={() => galleryInput.current?.click()}
-											className="self-start text-xs font-extrabold underline"
+											className="flex items-center gap-1 self-start text-xs font-extrabold underline"
 										>
+											<Images
+												aria-hidden="true"
+												className="size-3.5"
+												strokeWidth={2.75}
+											/>
 											Add from your photos
 										</button>
 									)}
 								</div>
 							) : (
 								<div className="flex flex-col gap-2 rounded-[14px] border-[2.5px] border-dashed border-ink bg-paper/30 p-2.5">
-									<Button onClick={() => cameraInput.current?.click()}>
+									<Button
+										icon={Camera}
+										onClick={() => cameraInput.current?.click()}
+									>
 										Take photo
 									</Button>
 									<div className="flex gap-2">
@@ -395,6 +452,7 @@ function UploadPage() {
 											size="sm"
 											fill="paper"
 											className="flex-1"
+											icon={Images}
 											onClick={() => galleryInput.current?.click()}
 										>
 											Photos
@@ -403,6 +461,7 @@ function UploadPage() {
 											size="sm"
 											fill="paper"
 											className="flex-1"
+											icon={FileText}
 											onClick={() => pdfInput.current?.click()}
 										>
 											PDF
@@ -419,7 +478,7 @@ function UploadPage() {
 					{error !== null && <ErrorNote error={error} />}
 
 					{!adding && (canUpload || progress !== null) && (
-						<Button disabled={!canUpload} onClick={upload}>
+						<Button icon={Upload} disabled={!canUpload} onClick={upload}>
 							{progress ??
 								`Upload ${pageCount} page${pageCount === 1 ? "" : "s"}`}
 						</Button>
@@ -513,9 +572,9 @@ function RemoveButton({
 			onClick={onClick}
 			disabled={disabled}
 			aria-label={label}
-			className="flex size-6 items-center justify-center rounded-full border-2 border-ink bg-paper text-sm leading-none font-extrabold"
+			className="flex size-6 items-center justify-center rounded-full border-2 border-ink bg-paper"
 		>
-			×
+			<X aria-hidden="true" className="size-3.5" strokeWidth={3.5} />
 		</button>
 	);
 }
