@@ -408,17 +408,12 @@ function UploadPage() {
 												aria-label="Take another photo"
 												disabled={progress !== null}
 												onClick={() => cameraInput.current?.click()}
-												className="flex aspect-[3/4] flex-col items-center justify-center gap-1 rounded-[10px] border-2 border-dashed border-ink"
+												className="flex aspect-[3/4] items-center justify-center rounded-[10px] border-2 border-dashed border-ink"
 											>
 												<Camera
 													aria-hidden="true"
 													className="size-6"
 													strokeWidth={2.5}
-												/>
-												<Plus
-													aria-hidden="true"
-													className="size-4"
-													strokeWidth={3}
 												/>
 											</button>
 										)}
