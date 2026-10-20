@@ -150,7 +150,14 @@ text in WAEC 2015 and WAEC 2017 is two questions.
     `possible_duplicate` for a reviewer to merge or keep.
 - **Comparing text** (`apps/api/src/matcher.rs`): wording is compared after
   dropping case, punctuation, spacing and LaTeX commands; options must match under
-  the same letters. With several candidates, the one that reads the same wins.
+  the same letters, but one copy may stop early (books print A-D of an A-E
+  question). With several candidates, the one that reads the same wins.
+- **A copy with more options** (the paper's E that a book left out): the options
+  are added and Sol/Luna answer again over the full set. If a reviewer already
+  settled the question, its answer stays and it is flagged `options_added`.
+- **Theory pieces under one tag**: topic books split one exam question's parts
+  across topics, each tagged with the same year/number. A theory copy that reads
+  differently is saved as its own question, without a flag.
 - **JAMB UTME**: year + number matches only for the fixed-paper years before
   computer-based testing started in 2013. After that, each book's
   JAMB questions are saved as their own questions and never matched.

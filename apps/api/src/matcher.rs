@@ -41,8 +41,13 @@ pub enum Decision {
     /// Save it as a new question; flag it if a near match exists.
     New { possible_duplicate: bool },
     /// The same question is saved: add an appearance and fill its blanks.
-    /// `conflict` when this copy disagrees with the saved one.
-    Existing { id: uuid::Uuid, conflict: bool },
+    /// `conflict` when this copy disagrees with the saved one; `adds_options` when
+    /// this copy prints options the saved one left out (a book that drops E).
+    Existing {
+        id: uuid::Uuid,
+        conflict: bool,
+        adds_options: bool,
+    },
 }
 
 /// A saved question found by key.
@@ -52,8 +57,11 @@ pub struct Candidate {
     pub text: Text,
 }
 
-/// Decides from the key's candidates (already filtered to compatible keys).
-pub fn decide(key: &Key, text: &Text, candidates: &[Candidate]) -> Decision {
+/// Decides from the key's candidates (already filtered to compatible keys, same kind).
+///
+/// Theory pieces that share a tag but read differently are kept apart without a flag:
+/// topic books split one exam question's parts across topics under the same tag.
+pub fn decide(key: &Key, theory: bool, text: &Text, candidates: &[Candidate]) -> Decision {
     let agreeing: Vec<&Candidate> = candidates
         .iter()
         .filter(|c| text.agrees_with(&c.text))
@@ -66,11 +74,16 @@ pub fn decide(key: &Key, text: &Text, candidates: &[Candidate]) -> Decision {
         ([c], _) => Decision::Existing {
             id: c.id,
             conflict: false,
+            adds_options: text.has_options_missing_from(&c.text),
+        },
+        ([], _) if theory => Decision::New {
+            possible_duplicate: false,
         },
         // The only copy with the same full key reads differently.
         ([], [c]) if key.sitting.is_some() && c.sitting.is_some() => Decision::Existing {
             id: c.id,
             conflict: true,
+            adds_options: false,
         },
         _ => Decision::New {
             possible_duplicate: true,
@@ -82,33 +95,55 @@ pub fn decide(key: &Key, text: &Text, candidates: &[Candidate]) -> Decision {
 #[derive(Clone, Debug, Default)]
 pub struct Text {
     pub body: String,
-    /// (label, body) in label order; pictures have an empty body.
+    /// (label, body); pictures have an empty body.
     pub options: Vec<(String, String)>,
-    /// Theory parts as "path: body closing", in printed order.
+    /// Theory parts as "body closing", in printed order.
     pub parts: Vec<String>,
 }
 
 const BODY_SIMILARITY: f64 = 0.9;
 const OPTION_SIMILARITY: f64 = 0.85;
 
+fn sorted_options(t: &Text) -> Vec<(String, String)> {
+    let mut o: Vec<(String, String)> = t
+        .options
+        .iter()
+        .map(|(l, b)| (l.to_ascii_uppercase(), b.clone()))
+        .collect();
+    o.sort();
+    o
+}
+
 impl Text {
     /// Same wording (allowing small reading differences) and the same options under the
-    /// same letters. Swapped options or a different question disagree.
+    /// same letters. One copy may stop early (A-D against A-E). Swapped options or a
+    /// different question disagree.
     pub fn agrees_with(&self, other: &Text) -> bool {
         let whole = |t: &Text| format!("{} {}", t.body, t.parts.join(" "));
         if similarity(&whole(self), &whole(other)) < BODY_SIMILARITY {
             return false;
         }
-        if self.options.len() != other.options.len() {
+        let (mine, theirs) = (sorted_options(self), sorted_options(other));
+        let (short, long) = if mine.len() <= theirs.len() {
+            (&mine, &theirs)
+        } else {
+            (&theirs, &mine)
+        };
+        // Objective questions keep at least two options in common.
+        if short.len() < 2 && !long.is_empty() {
             return false;
         }
-        let mut mine = self.options.clone();
-        let mut theirs = other.options.clone();
-        mine.sort();
-        theirs.sort();
-        mine.iter().zip(&theirs).all(|((la, a), (lb, b))| {
-            la.eq_ignore_ascii_case(lb) && similarity(a, b) >= OPTION_SIMILARITY
-        })
+        short
+            .iter()
+            .zip(long.iter())
+            .all(|((la, a), (lb, b))| la == lb && similarity(a, b) >= OPTION_SIMILARITY)
+    }
+
+    /// This copy has option letters the other doesn't.
+    pub fn has_options_missing_from(&self, other: &Text) -> bool {
+        self.options
+            .iter()
+            .any(|(l, _)| !other.options.iter().any(|(o, _)| o.eq_ignore_ascii_case(l)))
     }
 }
 
@@ -303,17 +338,20 @@ mod tests {
         let same = Decision::Existing {
             id: Uuid::from_u128(7),
             conflict: false,
+            adds_options: false,
         };
         let conflict = Decision::Existing {
             id: Uuid::from_u128(7),
             conflict: true,
+            adds_options: false,
         };
 
-        assert_eq!(decide(&key(None), &t, &[]), new);
+        assert_eq!(decide(&key(None), false, &t, &[]), new);
         // Full key: same text merges, different text is a conflict on the saved one.
         assert_eq!(
             decide(
                 &key(Some("may_june")),
+                false,
                 &t,
                 &[cand(Some("may_june"), t.clone())]
             ),
@@ -322,6 +360,7 @@ mod tests {
         assert_eq!(
             decide(
                 &key(Some("may_june")),
+                false,
                 &t,
                 &[cand(Some("may_june"), other.clone())]
             ),
@@ -329,15 +368,20 @@ mod tests {
         );
         // Sitting unknown on either side: text agreeing merges, otherwise a new flagged copy.
         assert_eq!(
-            decide(&key(None), &t, &[cand(Some("nov_dec"), t.clone())]),
+            decide(&key(None), false, &t, &[cand(Some("nov_dec"), t.clone())]),
             same
         );
         assert_eq!(
-            decide(&key(None), &t, &[cand(Some("nov_dec"), other.clone())]),
+            decide(
+                &key(None),
+                false,
+                &t,
+                &[cand(Some("nov_dec"), other.clone())]
+            ),
             dup
         );
         assert_eq!(
-            decide(&key(Some("may_june")), &t, &[cand(None, other)]),
+            decide(&key(Some("may_june")), false, &t, &[cand(None, other)]),
             dup
         );
         // Several candidates: the one that reads the same, else a reviewer decides.
@@ -345,6 +389,7 @@ mod tests {
         assert_eq!(
             decide(
                 &key(None),
+                false,
                 &t,
                 &[differs, cand(Some("may_june"), t.clone())]
             ),
@@ -353,6 +398,7 @@ mod tests {
         assert_eq!(
             decide(
                 &key(None),
+                false,
                 &t,
                 &[
                     cand(Some("may_june"), t.clone()),
@@ -360,6 +406,52 @@ mod tests {
                 ]
             ),
             dup
+        );
+    }
+
+    #[test]
+    fn a_book_that_drops_option_e_still_agrees() {
+        let book = text(Q.0, Q.1);
+        let mut paper = text(Q.0, Q.1);
+        paper.options.push(("E".into(), "taxonomy".into()));
+        assert!(book.agrees_with(&paper) && paper.agrees_with(&book));
+        assert!(paper.has_options_missing_from(&book));
+        assert!(!book.has_options_missing_from(&paper));
+        let cand = Candidate {
+            id: Uuid::nil(),
+            sitting: None,
+            text: book,
+        };
+        assert_eq!(
+            decide(&key(Some("may_june")), false, &paper, &[cand]),
+            Decision::Existing {
+                id: Uuid::nil(),
+                conflict: false,
+                adds_options: true
+            }
+        );
+    }
+
+    #[test]
+    fn theory_pieces_under_one_tag_are_kept_apart_unflagged() {
+        let piece = |b: &str| Text {
+            body: String::new(),
+            options: vec![],
+            parts: vec![b.into()],
+        };
+        let saved = Candidate {
+            id: Uuid::nil(),
+            sitting: Some("may_june".into()),
+            text: piece("Describe briefly two levels of cell organization in living organisms."),
+        };
+        let other = piece(
+            "Make a labelled drawing of a typical plant cell to show its essential features.",
+        );
+        assert_eq!(
+            decide(&key(Some("may_june")), true, &other, &[saved]),
+            Decision::New {
+                possible_duplicate: false
+            }
         );
     }
 

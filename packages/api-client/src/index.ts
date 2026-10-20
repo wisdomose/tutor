@@ -27,6 +27,7 @@ export type CheckReason =
   | 'has_diagram'
   | 'low_confidence'
   | 'no_answer'
+  | 'options_added'
   | 'possible_duplicate'
   | 'refers_to_number'
   | 'source_conflict'
@@ -36,6 +37,7 @@ export const checkReasonLabels: Record<CheckReason, string> = {
   has_diagram: 'Has diagram',
   low_confidence: 'Low confidence',
   no_answer: 'No answer',
+  options_added: 'Options added from another source',
   possible_duplicate: 'Possible duplicate',
   refers_to_number: 'Refers to a question number',
   source_conflict: 'Sources disagree',

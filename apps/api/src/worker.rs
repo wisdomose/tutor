@@ -544,13 +544,13 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
                 matches!(plans[j], Plan::Decided(Decision::New { .. })) && same_key(&drafts[j], d)
             });
             if let Some(j) = earlier {
-                plan = if drafts[j].text().agrees_with(&d.text()) {
-                    Plan::SameAs(j)
-                } else {
-                    Plan::Decided(Decision::New {
+                if drafts[j].text().agrees_with(&d.text()) {
+                    plan = Plan::SameAs(j);
+                } else if d.kind != "theory" {
+                    plan = Plan::Decided(Decision::New {
                         possible_duplicate: true,
-                    })
-                };
+                    });
+                }
             }
         }
         plans.push(plan);
@@ -569,7 +569,8 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
         .collect();
     let to_answer: Vec<usize> = (0..drafts.len())
         .filter(|&i| {
-            drafts[i].kind == "objective" && matches!(plans[i], Plan::Decided(Decision::New { .. }))
+            drafts[i].kind == "objective"
+                && matches!(plans[i], Plan::Decided(ref d) if needs_answers(d))
         })
         .collect();
     let for_answer: Vec<QuestionForAnswer> = to_answer
@@ -817,7 +818,98 @@ async fn decide_question(
             },
         });
     }
-    Ok(matcher::decide(&d.key, &d.text(), &candidates))
+    Ok(matcher::decide(
+        &d.key,
+        d.kind == "theory",
+        &d.text(),
+        &candidates,
+    ))
+}
+
+/// New objective questions are answered, and so are saved ones this copy adds options to.
+fn needs_answers(d: &Decision) -> bool {
+    matches!(
+        d,
+        Decision::New { .. }
+            | Decision::Existing {
+                conflict: false,
+                adds_options: true,
+                ..
+            }
+    )
+}
+
+/// A book left options out (A-D of an A-E question): add the ones this copy prints and
+/// take the new answers, since the right one may be among them. A question a reviewer
+/// has already settled keeps its answer and goes back for review instead.
+async fn add_missing_options(
+    tx: &mut Transaction<'_, Postgres>,
+    id: Uuid,
+    r: &PageRefs<'_>,
+    d: &Draft,
+    sol: Option<&Answer>,
+    luna: Option<&Answer>,
+) -> anyhow::Result<()> {
+    for o in &d.options {
+        let diagram_id = o
+            .diagram_ref
+            .as_deref()
+            .and_then(|x| r.diagrams.get(x))
+            .copied();
+        sqlx::query(
+            "insert into options (question_id, label, body, diagram_id, is_correct) values ($1, $2, $3, $4, false)
+             on conflict (question_id, label) do nothing",
+        )
+        .bind(id)
+        .bind(&o.label)
+        .bind(o.body.as_deref().filter(|b| !b.is_empty()).or(if diagram_id.is_none() { Some("") } else { None }))
+        .bind(diagram_id)
+        .execute(&mut **tx)
+        .await?;
+    }
+    let resolved: bool =
+        sqlx::query_scalar("select resolved_at is not null from questions where id = $1")
+            .bind(id)
+            .fetch_one(&mut **tx)
+            .await?;
+    if resolved || sol.is_none() {
+        flag(tx, id, "options_added").await?;
+        return Ok(());
+    }
+    let labels: Vec<String> =
+        sqlx::query_scalar("select label from options where question_id = $1 order by label")
+            .bind(id)
+            .fetch_all(&mut **tx)
+            .await?;
+    let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+    // has_diagram and the other non-answer reasons are already on the question.
+    let verdict = judge(&labels, sol, luna, false);
+    sqlx::query(
+        "update options set is_correct = coalesce(label = $2, false) where question_id = $1",
+    )
+    .bind(id)
+    .bind(&verdict.correct)
+    .execute(&mut **tx)
+    .await?;
+    sqlx::query(
+        "update questions set explanation = $2, confidence = $3, second_answer = $4, second_explanation = $5,
+           check_reasons = array(select x from unnest(check_reasons) x
+                                 where x not in ('no_answer', 'conflicting_answers', 'low_confidence')) || $6::text[]
+         where id = $1",
+    )
+    .bind(id)
+    .bind(sol.map(|a| a.explanation.as_str()))
+    .bind(sol.map(|a| a.confidence.as_str()).filter(|c| ["high", "medium", "low"].contains(c)))
+    .bind(luna.map(|a| a.answer.as_str()))
+    .bind(luna.map(|a| a.explanation.as_str()))
+    .bind(&verdict.reasons)
+    .execute(&mut **tx)
+    .await?;
+    sqlx::query("update questions set needs_check = cardinality(check_reasons) > 0 where id = $1")
+        .bind(id)
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
 }
 
 /// Saves a question as decided. Returns the question it now lives in, if any.
@@ -839,8 +931,15 @@ async fn save_draft(
             );
             Ok(None)
         }
-        Decision::Existing { id, conflict } => {
+        Decision::Existing {
+            id,
+            conflict,
+            adds_options,
+        } => {
             add_appearance(tx, *id, src, r, &d.number).await?;
+            if *adds_options {
+                add_missing_options(tx, *id, r, d, sol, luna).await?;
+            }
             if *conflict {
                 // Keep the saved copy as it is; a reviewer compares the two.
                 flag(tx, *id, "source_conflict").await?;
@@ -1278,7 +1377,7 @@ async fn join_split_questions(state: &AppState, page_id: Uuid) -> anyhow::Result
             refers_to_number: false,
         };
         let decision = decide_question(&state.db, &src, Some(&pair.first_number), &draft).await?;
-        let (sol, luna) = if !theory && matches!(decision, Decision::New { .. }) {
+        let (sol, luna) = if !theory && needs_answers(&decision) {
             let no_diagrams = HashMap::new();
             let (mut s, mut l) = answer_both(
                 state,
