@@ -15,6 +15,7 @@ import { Route as QuestionsIndexRouteImport } from './routes/questions.index'
 import { Route as QuestionsQuestionIdRouteImport } from './routes/questions.$questionId'
 import { Route as ReviewIndexRouteImport } from './routes/review.index'
 import { Route as ReviewQuestionIdRouteImport } from './routes/review.$questionId'
+import { Route as SourcesNewRouteImport } from './routes/sources.new'
 import { Route as UploadsIndexRouteImport } from './routes/uploads.index'
 import { Route as UploadsPageIdRouteImport } from './routes/uploads.$pageId'
 
@@ -48,6 +49,11 @@ const ReviewQuestionIdRoute = ReviewQuestionIdRouteImport.update({
   path: '/review/$questionId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SourcesNewRoute = SourcesNewRouteImport.update({
+  id: '/sources/new',
+  path: '/sources/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UploadsIndexRoute = UploadsIndexRouteImport.update({
   id: '/uploads/',
   path: '/uploads/',
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/api/$': typeof ApiSplatRoute
   '/questions/$questionId': typeof QuestionsQuestionIdRoute
   '/review/$questionId': typeof ReviewQuestionIdRoute
+  '/sources/new': typeof SourcesNewRoute
   '/uploads/$pageId': typeof UploadsPageIdRoute
   '/questions/': typeof QuestionsIndexRoute
   '/review/': typeof ReviewIndexRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/api/$': typeof ApiSplatRoute
   '/questions/$questionId': typeof QuestionsQuestionIdRoute
   '/review/$questionId': typeof ReviewQuestionIdRoute
+  '/sources/new': typeof SourcesNewRoute
   '/uploads/$pageId': typeof UploadsPageIdRoute
   '/questions': typeof QuestionsIndexRoute
   '/review': typeof ReviewIndexRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/api/$': typeof ApiSplatRoute
   '/questions/$questionId': typeof QuestionsQuestionIdRoute
   '/review/$questionId': typeof ReviewQuestionIdRoute
+  '/sources/new': typeof SourcesNewRoute
   '/uploads/$pageId': typeof UploadsPageIdRoute
   '/questions/': typeof QuestionsIndexRoute
   '/review/': typeof ReviewIndexRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/questions/$questionId'
     | '/review/$questionId'
+    | '/sources/new'
     | '/uploads/$pageId'
     | '/questions/'
     | '/review/'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/questions/$questionId'
     | '/review/$questionId'
+    | '/sources/new'
     | '/uploads/$pageId'
     | '/questions'
     | '/review'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/questions/$questionId'
     | '/review/$questionId'
+    | '/sources/new'
     | '/uploads/$pageId'
     | '/questions/'
     | '/review/'
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   ApiSplatRoute: typeof ApiSplatRoute
   QuestionsQuestionIdRoute: typeof QuestionsQuestionIdRoute
   ReviewQuestionIdRoute: typeof ReviewQuestionIdRoute
+  SourcesNewRoute: typeof SourcesNewRoute
   UploadsPageIdRoute: typeof UploadsPageIdRoute
   QuestionsIndexRoute: typeof QuestionsIndexRoute
   ReviewIndexRoute: typeof ReviewIndexRoute
@@ -178,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReviewQuestionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sources/new': {
+      id: '/sources/new'
+      path: '/sources/new'
+      fullPath: '/sources/new'
+      preLoaderRoute: typeof SourcesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/uploads/': {
       id: '/uploads/'
       path: '/uploads'
@@ -200,6 +220,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSplatRoute: ApiSplatRoute,
   QuestionsQuestionIdRoute: QuestionsQuestionIdRoute,
   ReviewQuestionIdRoute: ReviewQuestionIdRoute,
+  SourcesNewRoute: SourcesNewRoute,
   UploadsPageIdRoute: UploadsPageIdRoute,
   QuestionsIndexRoute: QuestionsIndexRoute,
   ReviewIndexRoute: ReviewIndexRoute,
