@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
 import {
 	BookOpen,
 	Camera,
@@ -84,6 +84,7 @@ function UploadPage() {
 	};
 
 	const addPdf = (e: ChangeEvent<HTMLInputElement>) => {
+		if (progress !== null) return;
 		const file = e.target.files?.[0];
 		e.target.value = "";
 		if (!file) return;
@@ -102,6 +103,7 @@ function UploadPage() {
 	};
 
 	const addFiles = (e: ChangeEvent<HTMLInputElement>) => {
+		if (progress !== null) return;
 		const files = Array.from(e.target.files ?? []);
 		e.target.value = "";
 		setDone(null);
@@ -138,7 +140,15 @@ function UploadPage() {
 		return e && `${e.body} ${e.code}`;
 	};
 	const pageCount = pdf ? (pdf.pages ?? 0) : picked.length;
-	const canUpload = !!source && pageCount > 0 && progress === null;
+	const uploading = progress !== null;
+	const canUpload = !!source && pageCount > 0 && !uploading;
+	// Leaving mid-upload would lose the photos not yet sent: block in-app navigation, and
+	// have the browser ask before a reload or closing the tab.
+	useBlocker({
+		shouldBlockFn: () => uploading,
+		enableBeforeUnload: () => uploading,
+		disabled: !uploading,
+	});
 
 	// One photo per request so each finishes well inside the proxy's time limit on a slow
 	// connection. Photos leave the list as they arrive, so Upload again sends the rest.
@@ -272,7 +282,7 @@ function UploadPage() {
 								</div>
 								<button
 									type="button"
-									disabled={progress !== null}
+									hidden={uploading}
 									onClick={() => setChanging(true)}
 									className="flex items-center gap-1 text-xs font-extrabold underline"
 								>
@@ -364,11 +374,12 @@ function UploadPage() {
 												: `${pdf.pages} page${pdf.pages === 1 ? "" : "s"}, sent in order`}
 										</div>
 									</div>
-									<RemoveButton
-										label="Remove PDF"
-										disabled={progress !== null}
-										onClick={() => setPdf(null)}
-									/>
+									{!uploading && (
+										<RemoveButton
+											label="Remove PDF"
+											onClick={() => setPdf(null)}
+										/>
+									)}
 								</div>
 							) : picked.length > 0 ? (
 								<div className="flex flex-col gap-2">
@@ -383,20 +394,20 @@ function UploadPage() {
 												<span className="absolute -top-2 -left-2 rounded-[7px] bg-ink px-1.5 font-display text-xs font-extrabold text-lime">
 													{i + 1}
 												</span>
-												<span className="absolute -top-2 -right-2">
-													<RemoveButton
-														label={`Remove photo ${i + 1}`}
-														disabled={progress !== null}
-														onClick={() => remove(p.id)}
-													/>
-												</span>
+												{!uploading && (
+													<span className="absolute -top-2 -right-2">
+														<RemoveButton
+															label={`Remove photo ${i + 1}`}
+															onClick={() => remove(p.id)}
+														/>
+													</span>
+												)}
 											</div>
 										))}
-										{picked.length < MAX_PHOTOS && (
+										{!uploading && picked.length < MAX_PHOTOS && (
 											<button
 												type="button"
 												aria-label="Take another photo"
-												disabled={progress !== null}
 												onClick={() => cameraInput.current?.click()}
 												className="flex aspect-[3/4] items-center justify-center rounded-[10px] border-2 border-dashed border-ink"
 											>
@@ -408,10 +419,9 @@ function UploadPage() {
 											</button>
 										)}
 									</div>
-									{picked.length < MAX_PHOTOS && (
+									{!uploading && picked.length < MAX_PHOTOS && (
 										<button
 											type="button"
-											disabled={progress !== null}
 											onClick={() => galleryInput.current?.click()}
 											className="flex items-center gap-1 self-start text-xs font-extrabold underline"
 										>

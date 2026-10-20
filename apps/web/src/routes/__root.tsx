@@ -56,13 +56,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			<body>
 				<QueryClientProvider client={queryClient}>
 					<Nav />
-					<main className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-4 pb-16">
+					<main className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-4 pb-24">
 						{children}
 					</main>
+					<QueueFab />
 				</QueryClientProvider>
 				{import.meta.env.DEV && (
 					<TanStackDevtools
-						config={{ position: "bottom-right" }}
+						config={{ position: "bottom-left" }}
 						plugins={[
 							{
 								name: "Tanstack Router",
@@ -77,8 +78,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	);
 }
 
+// Uploading happens on the home page (the Tutor logo).
 const links = [
-	{ to: "/", label: "Upload" },
 	{ to: "/uploads", label: "Uploads" },
 	{ to: "/review", label: "Review" },
 	{ to: "/questions", label: "Questions" },
@@ -103,7 +104,6 @@ function Nav() {
 			<Link
 				key={l.to}
 				to={l.to}
-				activeOptions={{ exact: l.to === "/" }}
 				className={cx(
 					"flex items-center gap-1.5 rounded-[11px] border-2 border-transparent font-extrabold whitespace-nowrap",
 					stacked ? "px-3 py-2.5 text-base" : "px-2.5 py-1 text-sm",
@@ -126,7 +126,7 @@ function Nav() {
 					Tutor
 				</Link>
 				<div className="hidden gap-1 sm:flex">{linkList(false)}</div>
-				<QueueDot />
+				<span className="flex-1" />
 				<button
 					type="button"
 					className="flex size-10 items-center justify-center rounded-[13px] border-[2.5px] border-ink bg-paper sm:hidden"
@@ -162,38 +162,61 @@ function Nav() {
 	);
 }
 
-/** Small indicator: green while working normally, lavender when paused, outlined when broken. */
-function QueueDot() {
+/**
+ * Pages waiting to be read, as a floating button that opens Uploads. Hidden when nothing
+ * is waiting; the ring spins while pages are being read and stops when the queue is paused.
+ */
+function QueueFab() {
 	const queue = useQuery({
 		queryKey: ["queue"],
 		queryFn: () => unwrap(api.GET("/queue")),
-		refetchInterval: 10_000,
+		refetchInterval: (q) =>
+			q.state.data && q.state.data.queued + q.state.data.processing > 0
+				? 5_000
+				: 15_000,
 	});
 	const q = queue.data;
-	const paused = q && (q.paused || q.limited_until);
-	const busy =
-		q && (q.queued > 0 || q.processing > 0 || q.diagrams_pending > 0);
-	const title = queue.error
-		? "API unreachable"
-		: paused
-			? "Processing paused"
-			: busy
-				? "Processing pages"
-				: "Idle";
+	const pending = q ? q.queued + q.processing : 0;
+	if (!q || pending === 0) return null;
+	const paused = q.paused || !!q.limited_until;
 	return (
 		<Link
 			to="/uploads"
-			className="ml-auto flex shrink-0 items-center gap-1.5 text-xs font-extrabold"
-			title={title}
+			aria-label={`${pending} page${pending === 1 ? "" : "s"} ${paused ? "waiting, paused" : "being read"}`}
+			className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-20 flex size-16 items-center justify-center"
 		>
+			<svg
+				aria-hidden="true"
+				viewBox="0 0 64 64"
+				className={cx("absolute inset-0 size-16", !paused && "animate-spin")}
+			>
+				<circle
+					cx="32"
+					cy="32"
+					r="29"
+					fill="none"
+					stroke="var(--color-paper)"
+					strokeWidth="5"
+				/>
+				<circle
+					cx="32"
+					cy="32"
+					r="29"
+					fill="none"
+					stroke="var(--color-ink)"
+					strokeWidth="5"
+					strokeLinecap="round"
+					strokeDasharray={paused ? "182 0" : "60 122"}
+				/>
+			</svg>
 			<span
 				className={cx(
-					"inline-block size-3 rounded-full border-2 border-ink",
-					queue.error ? "bg-paper" : paused ? "bg-lavender" : "bg-lime",
-					busy && !paused && "animate-pulse",
+					"flex size-12 items-center justify-center rounded-full border-[2.5px] border-ink font-display text-lg leading-none font-extrabold",
+					paused ? "bg-lavender" : "bg-lime",
 				)}
-			/>
-			<span className="hidden sm:inline">{title}</span>
+			>
+				{pending > 9 ? "9+" : pending}
+			</span>
 		</Link>
 	);
 }
