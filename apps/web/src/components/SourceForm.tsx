@@ -49,7 +49,9 @@ export function describeSource(s: Source, examName?: string) {
 	return parts.filter(Boolean).join(" · ");
 }
 
-/** Adds a book or exam paper in four steps: kind, subject, details, check. */
+type StepKey = "kind" | "subject" | "layout" | "details" | "check";
+
+/** Adds a book or exam paper step by step: kind, subject, arrangement (books), details, check. */
 export function SourceForm({
 	onCreated,
 	onCancel,
@@ -67,10 +69,10 @@ export function SourceForm({
 		queryFn: () => unwrap(api.GET("/exams")),
 	});
 
-	const [step, setStep] = useState(1);
+	const [at, setAt] = useState<StepKey>("kind");
 	const [kind, setKind] = useState<"book" | "paper" | null>(null);
 	const [subjectId, setSubjectId] = useState("");
-	const [layout, setLayout] = useState<"by_topic" | "by_year">("by_topic");
+	const [layout, setLayout] = useState<"by_topic" | "by_year" | null>(null);
 	const [title, setTitle] = useState("");
 	// A paper's title follows its details until it's typed over.
 	const [titleTyped, setTitleTyped] = useState(false);
@@ -101,18 +103,26 @@ export function SourceForm({
 		},
 	});
 
-	const stepDone = [
-		true,
-		subjectId !== "",
-		finalTitle.trim() !== "" &&
+	// A paper is one exam sitting, so it has no arrangement step.
+	const steps: StepKey[] = isPaper
+		? ["kind", "subject", "details", "check"]
+		: ["kind", "subject", "layout", "details", "check"];
+	const index = steps.indexOf(at);
+	const done: Record<StepKey, boolean> = {
+		kind: kind !== null,
+		subject: subjectId !== "",
+		layout: layout !== null,
+		details:
+			finalTitle.trim() !== "" &&
 			(!isPaper || (examId !== "" && /^\d{4}$/.test(year))),
-		true,
-	];
+		check: true,
+	};
+	const next = () => setAt(steps[index + 1]);
 
 	const submit = () =>
 		create.mutate({
 			kind: kind ?? "book",
-			layout: isPaper ? "single_paper" : layout,
+			layout: isPaper ? "single_paper" : (layout ?? "by_topic"),
 			title: finalTitle,
 			subject_id: subjectId,
 			exam_id: examId || null,
@@ -126,18 +136,20 @@ export function SourceForm({
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex items-center gap-3">
-				<div className="flex flex-1 gap-1.5" aria-label={`Step ${step} of 4`}>
-					{[1, 2, 3, 4].map((n) => (
+				<div className="flex flex-1 gap-1.5" aria-hidden="true">
+					{steps.map((key, n) => (
 						<span
-							key={n}
+							key={key}
 							className={cx(
 								"h-2 flex-1 rounded-full border-2 border-ink",
-								n <= step ? "bg-ink" : "bg-paper",
+								n <= index ? "bg-ink" : "bg-paper",
 							)}
 						/>
 					))}
 				</div>
-				<span className="font-display text-sm font-extrabold">{step}/4</span>
+				<span className="font-display text-sm font-extrabold">
+					{index + 1}/{steps.length}
+				</span>
 				<button
 					type="button"
 					aria-label="Cancel"
@@ -148,7 +160,7 @@ export function SourceForm({
 				</button>
 			</div>
 
-			{step === 1 && (
+			{at === "kind" && (
 				<div className="grid grid-cols-2 gap-3">
 					<KindTile
 						icon={BookOpen}
@@ -156,7 +168,7 @@ export function SourceForm({
 						on={kind === "book"}
 						onClick={() => {
 							setKind("book");
-							setStep(2);
+							setAt("subject");
 						}}
 					/>
 					<KindTile
@@ -165,13 +177,13 @@ export function SourceForm({
 						on={kind === "paper"}
 						onClick={() => {
 							setKind("paper");
-							setStep(2);
+							setAt("subject");
 						}}
 					/>
 				</div>
 			)}
 
-			{step === 2 && (
+			{at === "subject" && (
 				<Field label="Subject">
 					<Select
 						value={subjectId}
@@ -199,26 +211,39 @@ export function SourceForm({
 				</Field>
 			)}
 
-			{step === 3 && (
+			{at === "layout" && (
+				<div className="grid grid-cols-2 gap-3">
+					<KindTile
+						icon={ListTree}
+						label="By topic"
+						on={layout === "by_topic"}
+						onClick={() => {
+							setLayout("by_topic");
+							setAt("details");
+						}}
+					/>
+					<KindTile
+						icon={CalendarDays}
+						label="By year"
+						on={layout === "by_year"}
+						onClick={() => {
+							setLayout("by_year");
+							setAt("details");
+						}}
+					/>
+				</div>
+			)}
+
+			{at === "details" && (
 				<div className="flex flex-col gap-4">
 					{!isPaper && (
-						<>
-							<Field label="Title">
-								<TextInput
-									value={title}
-									autoFocus
-									onChange={(e) => setTitle(e.target.value)}
-								/>
-							</Field>
-							<Toggle
-								value={layout}
-								onChange={setLayout}
-								options={[
-									{ value: "by_topic", label: "By topic", icon: ListTree },
-									{ value: "by_year", label: "By year", icon: CalendarDays },
-								]}
+						<Field label="Title">
+							<TextInput
+								value={title}
+								autoFocus
+								onChange={(e) => setTitle(e.target.value)}
 							/>
-						</>
+						</Field>
 					)}
 					<Field label="Exam">
 						<Select value={examId} onChange={(e) => setExamId(e.target.value)}>
@@ -293,18 +318,26 @@ export function SourceForm({
 				</div>
 			)}
 
-			{step === 4 && (
+			{at === "check" && (
 				<div className="flex flex-col divide-y-2 divide-ink rounded-[14px] border-[2.5px] border-ink bg-paper">
 					<SummaryRow
 						icon={isPaper ? FileText : BookOpen}
-						onEdit={() => setStep(1)}
+						onEdit={() => setAt("kind")}
 					>
 						{isPaper ? "Exam paper" : "Book"}
 					</SummaryRow>
-					<SummaryRow icon={GraduationCap} onEdit={() => setStep(2)}>
+					<SummaryRow icon={GraduationCap} onEdit={() => setAt("subject")}>
 						{subject?.name} · {subject?.level.toUpperCase()}
 					</SummaryRow>
-					<SummaryRow icon={PenLine} onEdit={() => setStep(3)}>
+					{!isPaper && (
+						<SummaryRow
+							icon={layout === "by_year" ? CalendarDays : ListTree}
+							onEdit={() => setAt("layout")}
+						>
+							{layout === "by_year" ? "By year" : "By topic"}
+						</SummaryRow>
+					)}
+					<SummaryRow icon={PenLine} onEdit={() => setAt("details")}>
 						<span className="font-display text-base">{finalTitle}</span>
 						<span className="block text-xs text-muted">
 							{(isPaper
@@ -314,12 +347,7 @@ export function SourceForm({
 										paper && `Paper ${paper}`,
 										sitting && sittingLabels[sitting],
 									]
-								: [
-										layout === "by_topic" ? "By topic" : "By year",
-										examLabel,
-										publisher,
-										edition,
-									]
+								: [examLabel, publisher, edition]
 							)
 								.filter(Boolean)
 								.join(" · ")}
@@ -330,23 +358,23 @@ export function SourceForm({
 
 			{create.error && <ErrorNote error={create.error} />}
 
-			{step > 1 && (
+			{at !== "kind" && (
 				<div className="flex gap-3">
 					<Button
 						fill="paper"
 						icon={ChevronLeft}
 						className="flex-1"
-						onClick={() => setStep(step - 1)}
+						onClick={() => setAt(steps[index - 1])}
 					>
 						Back
 					</Button>
-					{step < 4 ? (
+					{at !== "check" ? (
 						<Button
 							icon={ChevronRight}
 							iconEnd
 							className="flex-[1.4]"
-							disabled={!stepDone[step - 1]}
-							onClick={() => setStep(step + 1)}
+							disabled={!done[at]}
+							onClick={next}
 						>
 							Next
 						</Button>
@@ -419,35 +447,5 @@ function SummaryRow({
 				strokeWidth={2.5}
 			/>
 		</button>
-	);
-}
-
-function Toggle<T extends string>({
-	value,
-	onChange,
-	options,
-}: {
-	value: T;
-	onChange: (v: T) => void;
-	options: { value: T; label: string; icon: LucideIcon }[];
-}) {
-	return (
-		<div className="flex gap-2">
-			{options.map(({ value: v, label, icon: Icon }) => (
-				<button
-					key={v}
-					type="button"
-					onClick={() => onChange(v)}
-					aria-pressed={value === v}
-					className={cx(
-						"flex flex-1 items-center justify-center gap-2 rounded-[13px] border-[2.5px] border-ink px-3 py-2 font-display font-extrabold",
-						value === v ? "bg-ink text-lime" : "bg-paper",
-					)}
-				>
-					<Icon aria-hidden="true" className="size-4" strokeWidth={2.75} />
-					{label}
-				</button>
-			))}
-		</div>
 	);
 }
