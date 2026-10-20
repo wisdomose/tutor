@@ -13,6 +13,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { useEffect, useState } from "react";
+import { ToastProvider } from "#/components/Toast";
 import { cx } from "#/components/ui";
 import { api, unwrap } from "#/lib/api";
 import appCss from "../styles.css?url";
@@ -55,11 +56,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			</head>
 			<body>
 				<QueryClientProvider client={queryClient}>
-					<Nav />
-					<main className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-4 pb-24">
-						{children}
-					</main>
-					<QueueFab />
+					<ToastProvider>
+						<Nav />
+						<main className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-4 pb-24">
+							{children}
+						</main>
+						<QueueFab />
+					</ToastProvider>
 				</QueryClientProvider>
 				{import.meta.env.DEV && (
 					<TanStackDevtools

@@ -7,6 +7,7 @@ import { MathText } from "./MathText";
 import { PagePhoto } from "./PagePhoto";
 import { Reasons } from "./Reasons";
 import { sittingLabels } from "./SourceForm";
+import { useToast } from "./Toast";
 import {
 	Button,
 	Card,
@@ -106,7 +107,7 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 		original_number: q.original_number ?? "",
 		marks: q.marks?.toString() ?? "",
 	}));
-	const [savedNote, setSavedNote] = useState<string | null>(null);
+	const toast = useToast();
 
 	const invalidate = () => {
 		qc.invalidateQueries({ queryKey: ["review"] });
@@ -163,7 +164,7 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 					});
 				else navigate({ to: "/review" });
 			} else {
-				setSavedNote(resolve ? "Saved and marked as checked" : "Saved");
+				toast(resolve ? "Saved and checked" : "Saved");
 			}
 		},
 	});
@@ -171,6 +172,7 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 		mutationFn: () =>
 			unwrap(api.DELETE("/questions/{id}", { params: { path: { id: q.id } } })),
 		onSuccess: () => {
+			toast("Question deleted");
 			invalidate();
 			goNext();
 		},
@@ -184,6 +186,7 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 				}),
 			),
 		onSuccess: (kept) => {
+			toast("Merged");
 			qc.setQueryData(["question", kept.id], kept);
 			qc.removeQueries({ queryKey: ["question", q.id] });
 			invalidate();
@@ -378,9 +381,6 @@ function Editor({ q, mode }: { q: QuestionDetail; mode: "review" | "bank" }) {
 					</Field>
 
 					{error && <ErrorNote error={error} />}
-					{savedNote && !save.isPending && (
-						<p className="text-sm font-extrabold">{savedNote} ✓</p>
-					)}
 
 					<div className="flex gap-3">
 						<Button
@@ -758,6 +758,7 @@ function GroupPanel({
 	mode: "review" | "bank";
 }) {
 	const qc = useQueryClient();
+	const toast = useToast();
 	const [text, setText] = useState(group.display_instruction ?? "");
 	const changed = text.trim() !== (group.display_instruction ?? "");
 	const save = useMutation({
@@ -769,6 +770,7 @@ function GroupPanel({
 				}),
 			),
 		onSuccess: () => {
+			toast("Instruction saved");
 			for (const m of group.members)
 				qc.invalidateQueries({ queryKey: ["question", m.id] });
 		},
@@ -827,9 +829,6 @@ function GroupPanel({
 					>
 						Save instruction
 					</Button>
-				)}
-				{save.isSuccess && !changed && (
-					<p className="text-xs font-extrabold">Saved ✓</p>
 				)}
 				{save.error && <ErrorNote error={save.error} />}
 			</div>

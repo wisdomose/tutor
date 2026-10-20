@@ -3,7 +3,6 @@ import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
 import {
 	BookOpen,
 	Camera,
-	Check,
 	FileText,
 	Images,
 	PenLine,
@@ -21,6 +20,7 @@ import {
 import { PageRow } from "#/components/PageRow";
 import { QueuePanel } from "#/components/QueuePanel";
 import { describeSource } from "#/components/SourceForm";
+import { useToast } from "#/components/Toast";
 import {
 	Button,
 	Card,
@@ -65,7 +65,7 @@ function UploadPage() {
 	const [pdf, setPdf] = useState<PickedPdf | null>(null);
 	const [progress, setProgress] = useState<string | null>(null);
 	const [error, setError] = useState<unknown>(null);
-	const [done, setDone] = useState<number | null>(null);
+	const toast = useToast();
 	const cameraInput = useRef<HTMLInputElement>(null);
 	const galleryInput = useRef<HTMLInputElement>(null);
 	const pdfInput = useRef<HTMLInputElement>(null);
@@ -91,7 +91,6 @@ function UploadPage() {
 	};
 	const takePdf = (file: File) => {
 		if (progress !== null) return;
-		setDone(null);
 		setError(null);
 		for (const p of picked) URL.revokeObjectURL(p.preview);
 		setPicked([]);
@@ -112,7 +111,6 @@ function UploadPage() {
 	};
 	const takePhotos = (files: File[]) => {
 		if (progress !== null || files.length === 0) return;
-		setDone(null);
 		setError(null);
 		setPdf(null);
 		setPicked((prev) => {
@@ -210,11 +208,10 @@ function UploadPage() {
 		if (!canUpload) return;
 		setError(null);
 		try {
-			setDone(
-				pdf
-					? await uploadPickedPdf(source.id, pdf.file)
-					: await uploadPicked(source.id),
-			);
+			const sent = pdf
+				? await uploadPickedPdf(source.id, pdf.file)
+				: await uploadPicked(source.id);
+			toast(`${sent} page${sent === 1 ? "" : "s"} uploaded`);
 			qc.invalidateQueries({ queryKey: ["pages"] });
 			qc.invalidateQueries({ queryKey: ["queue"] });
 			qc.invalidateQueries({ queryKey: ["sources"] });
@@ -495,12 +492,6 @@ function UploadPage() {
 				</Card>
 			</DropZone>
 
-			{done !== null && (
-				<Toast key={done} onGone={() => setDone(null)}>
-					{done} page{done === 1 ? "" : "s"} uploaded
-				</Toast>
-			)}
-
 			<QueuePanel />
 
 			<div className="mt-2 flex items-baseline justify-between">
@@ -625,30 +616,5 @@ function DropZone({
 				</div>
 			)}
 		</div>
-	);
-}
-
-/** A short note at the bottom of the screen that goes away by itself. */
-function Toast({
-	children,
-	onGone,
-}: {
-	children: ReactNode;
-	onGone: () => void;
-}) {
-	// The page re-renders while it polls; keep the first timer rather than restarting it.
-	const gone = useRef(onGone);
-	gone.current = onGone;
-	useEffect(() => {
-		const t = setTimeout(() => gone.current(), 3000);
-		return () => clearTimeout(t);
-	}, []);
-	return (
-		<output className="toast fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border-[2.5px] border-ink bg-ink py-2.5 pr-5 pl-3 font-display text-base font-extrabold whitespace-nowrap text-lime">
-			<span className="flex size-6 items-center justify-center rounded-full bg-lime text-ink">
-				<Check aria-hidden="true" className="size-4" strokeWidth={3.5} />
-			</span>
-			{children}
-		</output>
 	);
 }
