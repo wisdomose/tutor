@@ -11,7 +11,6 @@ import {
 	ListTree,
 	type LucideIcon,
 	PenLine,
-	X,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import {
@@ -52,13 +51,7 @@ export function describeSource(s: Source, examName?: string) {
 type StepKey = "kind" | "subject" | "layout" | "details" | "check";
 
 /** Adds a book or exam paper step by step: kind, subject, arrangement (books), details, check. */
-export function SourceForm({
-	onCreated,
-	onCancel,
-}: {
-	onCreated: (s: Source) => void;
-	onCancel: () => void;
-}) {
+export function SourceForm({ onCreated }: { onCreated: (s: Source) => void }) {
 	const qc = useQueryClient();
 	const subjects = useQuery({
 		queryKey: ["subjects"],
@@ -147,17 +140,6 @@ export function SourceForm({
 						/>
 					))}
 				</div>
-				<span className="font-display text-sm font-extrabold">
-					{index + 1}/{steps.length}
-				</span>
-				<button
-					type="button"
-					aria-label="Cancel"
-					onClick={onCancel}
-					className="flex size-8 items-center justify-center rounded-[10px] border-2 border-ink bg-paper"
-				>
-					<X aria-hidden="true" className="size-4" strokeWidth={3} />
-				</button>
 			</div>
 
 			{at === "kind" && (

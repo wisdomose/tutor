@@ -21,7 +21,6 @@ function NewSourcePage() {
 						} catch {}
 						navigate({ to: "/" });
 					}}
-					onCancel={() => navigate({ to: "/" })}
 				/>
 			</Card>
 		</>
