@@ -84,10 +84,12 @@ function UploadPage() {
 	};
 
 	const addPdf = (e: ChangeEvent<HTMLInputElement>) => {
-		if (progress !== null) return;
 		const file = e.target.files?.[0];
 		e.target.value = "";
-		if (!file) return;
+		if (file) takePdf(file);
+	};
+	const takePdf = (file: File) => {
+		if (progress !== null) return;
 		setDone(null);
 		setError(null);
 		for (const p of picked) URL.revokeObjectURL(p.preview);
@@ -103,9 +105,12 @@ function UploadPage() {
 	};
 
 	const addFiles = (e: ChangeEvent<HTMLInputElement>) => {
-		if (progress !== null) return;
 		const files = Array.from(e.target.files ?? []);
 		e.target.value = "";
+		takePhotos(files);
+	};
+	const takePhotos = (files: File[]) => {
+		if (progress !== null || files.length === 0) return;
 		setDone(null);
 		setError(null);
 		setPdf(null);
@@ -223,260 +228,271 @@ function UploadPage() {
 		<>
 			<PageTitle>Question converter</PageTitle>
 
-			<Card fill="lavender">
-				<div className="flex flex-col gap-4">
-					<input
-						ref={cameraInput}
-						type="file"
-						accept="image/*"
-						capture="environment"
-						hidden
-						onChange={addFiles}
-					/>
-					<input
-						ref={galleryInput}
-						type="file"
-						accept="image/*"
-						multiple
-						hidden
-						onChange={addFiles}
-					/>
-					<input
-						ref={pdfInput}
-						type="file"
-						accept="application/pdf"
-						hidden
-						onChange={addPdf}
-					/>
+			<DropZone
+				enabled={!!source && progress === null}
+				onDrop={(files) => {
+					const pdfFile = files.find((f) => f.type === "application/pdf");
+					if (pdfFile) takePdf(pdfFile);
+					else takePhotos(files.filter((f) => f.type.startsWith("image/")));
+				}}
+			>
+				<Card fill="lavender">
+					<div className="flex flex-col gap-4">
+						<input
+							ref={cameraInput}
+							type="file"
+							accept="image/*"
+							capture="environment"
+							hidden
+							onChange={addFiles}
+						/>
+						<input
+							ref={galleryInput}
+							type="file"
+							accept="image/*"
+							multiple
+							hidden
+							onChange={addFiles}
+						/>
+						<input
+							ref={pdfInput}
+							type="file"
+							accept="application/pdf"
+							hidden
+							onChange={addPdf}
+						/>
 
-					<Step n={1} label="Book or paper">
-						{source && !changing ? (
-							<div className="flex items-start gap-3 rounded-[14px] border-[2.5px] border-ink bg-paper px-3 py-2.5">
-								<div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[10px] border-2 border-ink bg-lavender-soft">
-									{source.kind === "paper" ? (
-										<FileText
-											aria-hidden="true"
-											className="size-5"
-											strokeWidth={2.5}
-										/>
-									) : (
-										<BookOpen
-											aria-hidden="true"
-											className="size-5"
-											strokeWidth={2.5}
-										/>
-									)}
-								</div>
-								<div className="min-w-0 flex-1">
-									<div className="font-display text-lg leading-tight font-extrabold">
-										{source.title}
-									</div>
-									<div className="mt-0.5 text-xs font-bold text-muted">
-										{source.subject} ·{" "}
-										{describeSource(source, examName(source.exam_id))}
-										<br />
-										{source.page_count === 0
-											? "No pages yet"
-											: `${source.page_count} page${source.page_count === 1 ? "" : "s"} so far`}
-									</div>
-								</div>
-								<button
-									type="button"
-									hidden={uploading}
-									onClick={() => setChanging(true)}
-									className="flex items-center gap-1 text-xs font-extrabold underline"
-								>
-									<PenLine
-										aria-hidden="true"
-										className="size-3.5"
-										strokeWidth={2.75}
-									/>
-									Change
-								</button>
-							</div>
-						) : (
-							<div className="flex flex-col gap-2.5">
-								<Select
-									value={source ? sourceId : ""}
-									aria-label="Book or paper"
-									onChange={(e) => {
-										chooseSource(e.target.value);
-										setChanging(false);
-									}}
-								>
-									<option value="" disabled>
-										{sources.data?.length === 0
-											? "None yet — add one below"
-											: "Choose one…"}
-									</option>
-									{groupBySubject(sources.data ?? []).map(([subject, list]) => (
-										<optgroup key={subject} label={subject}>
-											{list.map((s) => (
-												<option key={s.id} value={s.id}>
-													{s.title}
-												</option>
-											))}
-										</optgroup>
-									))}
-								</Select>
-								<div className="flex gap-4">
-									<Link
-										to="/sources/new"
-										className="flex items-center gap-1 text-sm font-extrabold underline"
-									>
-										<Plus
-											aria-hidden="true"
-											className="size-4"
-											strokeWidth={3}
-										/>
-										Add a new book or paper
-									</Link>
-									{source && (
-										<button
-											type="button"
-											onClick={() => setChanging(false)}
-											className="text-sm font-extrabold text-muted underline"
-										>
-											Cancel
-										</button>
-									)}
-								</div>
-							</div>
-						)}
-					</Step>
-
-					{
-						<Step
-							n={2}
-							label={
-								pdf
-									? "PDF"
-									: picked.length > 0
-										? `Pages · ${picked.length} of ${MAX_PHOTOS}`
-										: "Pages"
-							}
-							off={!source}
-						>
-							{!source ? null : pdf ? (
-								<div className="flex items-center gap-3 rounded-[14px] border-[2.5px] border-ink bg-paper px-3 py-2.5">
-									<FileText
-										aria-hidden="true"
-										className="size-6 shrink-0"
-										strokeWidth={2.5}
-									/>
-									<div className="min-w-0 flex-1">
-										<div className="truncate text-sm font-extrabold">
-											{pdf.file.name}
-										</div>
-										<div className="text-xs font-bold text-muted">
-											{pdf.pages === null
-												? "Counting pages…"
-												: `${pdf.pages} page${pdf.pages === 1 ? "" : "s"}, sent in order`}
-										</div>
-									</div>
-									{!uploading && (
-										<RemoveButton
-											label="Remove PDF"
-											onClick={() => setPdf(null)}
-										/>
-									)}
-								</div>
-							) : picked.length > 0 ? (
-								<div className="flex flex-col gap-2">
-									<div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
-										{picked.map((p, i) => (
-											<div key={p.id} className="relative">
-												<img
-													src={p.preview}
-													alt={`Page ${i + 1}`}
-													className="aspect-[3/4] w-full rounded-[10px] border-2 border-ink object-cover"
-												/>
-												<span className="absolute -top-2 -left-2 rounded-[7px] bg-ink px-1.5 font-display text-xs font-extrabold text-lime">
-													{i + 1}
-												</span>
-												{!uploading && (
-													<span className="absolute -top-2 -right-2">
-														<RemoveButton
-															label={`Remove photo ${i + 1}`}
-															onClick={() => remove(p.id)}
-														/>
-													</span>
-												)}
-											</div>
-										))}
-										{!uploading && picked.length < MAX_PHOTOS && (
-											<button
-												type="button"
-												aria-label="Take another photo"
-												onClick={() => cameraInput.current?.click()}
-												className="flex aspect-[3/4] items-center justify-center rounded-[10px] border-2 border-dashed border-ink"
-											>
-												<Camera
-													aria-hidden="true"
-													className="size-6"
-													strokeWidth={2.5}
-												/>
-											</button>
+						<Step n={1} label="Book or paper">
+							{source && !changing ? (
+								<div className="flex items-start gap-3 rounded-[14px] border-[2.5px] border-ink bg-paper px-3 py-2.5">
+									<div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[10px] border-2 border-ink bg-lavender-soft">
+										{source.kind === "paper" ? (
+											<FileText
+												aria-hidden="true"
+												className="size-5"
+												strokeWidth={2.5}
+											/>
+										) : (
+											<BookOpen
+												aria-hidden="true"
+												className="size-5"
+												strokeWidth={2.5}
+											/>
 										)}
 									</div>
-									{!uploading && picked.length < MAX_PHOTOS && (
-										<button
-											type="button"
-											onClick={() => galleryInput.current?.click()}
-											className="flex items-center gap-1 self-start text-xs font-extrabold underline"
-										>
-											<Images
-												aria-hidden="true"
-												className="size-3.5"
-												strokeWidth={2.75}
-											/>
-											Add from your photos
-										</button>
-									)}
+									<div className="min-w-0 flex-1">
+										<div className="font-display text-lg leading-tight font-extrabold">
+											{source.title}
+										</div>
+										<div className="mt-0.5 text-xs font-bold text-muted">
+											{source.subject} ·{" "}
+											{describeSource(source, examName(source.exam_id))}
+											<br />
+											{source.page_count === 0
+												? "No pages yet"
+												: `${source.page_count} page${source.page_count === 1 ? "" : "s"} so far`}
+										</div>
+									</div>
+									<button
+										type="button"
+										hidden={uploading}
+										onClick={() => setChanging(true)}
+										className="flex items-center gap-1 text-xs font-extrabold underline"
+									>
+										<PenLine
+											aria-hidden="true"
+											className="size-3.5"
+											strokeWidth={2.75}
+										/>
+										Change
+									</button>
 								</div>
 							) : (
-								<div className="flex flex-col gap-2 rounded-[14px] border-[2.5px] border-dashed border-ink bg-paper/30 p-2.5">
-									<Button
-										icon={Camera}
-										onClick={() => cameraInput.current?.click()}
+								<div className="flex flex-col gap-2.5">
+									<Select
+										value={source ? sourceId : ""}
+										aria-label="Book or paper"
+										onChange={(e) => {
+											chooseSource(e.target.value);
+											setChanging(false);
+										}}
 									>
-										Take photo
-									</Button>
-									<div className="flex gap-2">
-										<Button
-											size="sm"
-											fill="paper"
-											className="flex-1"
-											icon={Images}
-											onClick={() => galleryInput.current?.click()}
+										<option value="" disabled>
+											{sources.data?.length === 0
+												? "None yet — add one below"
+												: "Choose one…"}
+										</option>
+										{groupBySubject(sources.data ?? []).map(
+											([subject, list]) => (
+												<optgroup key={subject} label={subject}>
+													{list.map((s) => (
+														<option key={s.id} value={s.id}>
+															{s.title}
+														</option>
+													))}
+												</optgroup>
+											),
+										)}
+									</Select>
+									<div className="flex gap-4">
+										<Link
+											to="/sources/new"
+											className="flex items-center gap-1 text-sm font-extrabold underline"
 										>
-											Photos
-										</Button>
-										<Button
-											size="sm"
-											fill="paper"
-											className="flex-1"
-											icon={FileText}
-											onClick={() => pdfInput.current?.click()}
-										>
-											PDF
-										</Button>
+											<Plus
+												aria-hidden="true"
+												className="size-4"
+												strokeWidth={3}
+											/>
+											Add a new book or paper
+										</Link>
+										{source && (
+											<button
+												type="button"
+												onClick={() => setChanging(false)}
+												className="text-sm font-extrabold text-muted underline"
+											>
+												Cancel
+											</button>
+										)}
 									</div>
 								</div>
 							)}
 						</Step>
-					}
 
-					{error !== null && <ErrorNote error={error} />}
+						{
+							<Step
+								n={2}
+								label={
+									pdf
+										? "PDF"
+										: picked.length > 0
+											? `Pages · ${picked.length} of ${MAX_PHOTOS}`
+											: "Pages"
+								}
+								off={!source}
+							>
+								{!source ? null : pdf ? (
+									<div className="flex items-center gap-3 rounded-[14px] border-[2.5px] border-ink bg-paper px-3 py-2.5">
+										<FileText
+											aria-hidden="true"
+											className="size-6 shrink-0"
+											strokeWidth={2.5}
+										/>
+										<div className="min-w-0 flex-1">
+											<div className="truncate text-sm font-extrabold">
+												{pdf.file.name}
+											</div>
+											<div className="text-xs font-bold text-muted">
+												{pdf.pages === null
+													? "Counting pages…"
+													: `${pdf.pages} page${pdf.pages === 1 ? "" : "s"}, sent in order`}
+											</div>
+										</div>
+										{!uploading && (
+											<RemoveButton
+												label="Remove PDF"
+												onClick={() => setPdf(null)}
+											/>
+										)}
+									</div>
+								) : picked.length > 0 ? (
+									<div className="flex flex-col gap-2">
+										<div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
+											{picked.map((p, i) => (
+												<div key={p.id} className="relative">
+													<img
+														src={p.preview}
+														alt={`Page ${i + 1}`}
+														className="aspect-[3/4] w-full rounded-[10px] border-2 border-ink object-cover"
+													/>
+													<span className="absolute -top-2 -left-2 rounded-[7px] bg-ink px-1.5 font-display text-xs font-extrabold text-lime">
+														{i + 1}
+													</span>
+													{!uploading && (
+														<span className="absolute -top-2 -right-2">
+															<RemoveButton
+																label={`Remove photo ${i + 1}`}
+																onClick={() => remove(p.id)}
+															/>
+														</span>
+													)}
+												</div>
+											))}
+											{!uploading && picked.length < MAX_PHOTOS && (
+												<button
+													type="button"
+													aria-label="Take another photo"
+													onClick={() => cameraInput.current?.click()}
+													className="flex aspect-[3/4] items-center justify-center rounded-[10px] border-2 border-dashed border-ink"
+												>
+													<Camera
+														aria-hidden="true"
+														className="size-6"
+														strokeWidth={2.5}
+													/>
+												</button>
+											)}
+										</div>
+										{!uploading && picked.length < MAX_PHOTOS && (
+											<button
+												type="button"
+												onClick={() => galleryInput.current?.click()}
+												className="flex items-center gap-1 self-start text-xs font-extrabold underline"
+											>
+												<Images
+													aria-hidden="true"
+													className="size-3.5"
+													strokeWidth={2.75}
+												/>
+												Add from your photos
+											</button>
+										)}
+									</div>
+								) : (
+									<div className="flex flex-col gap-2 rounded-[14px] border-[2.5px] border-dashed border-ink bg-paper/30 p-2.5">
+										<Button
+											icon={Camera}
+											onClick={() => cameraInput.current?.click()}
+										>
+											Take photo
+										</Button>
+										<div className="flex gap-2">
+											<Button
+												size="sm"
+												fill="paper"
+												className="flex-1"
+												icon={Images}
+												onClick={() => galleryInput.current?.click()}
+											>
+												Photos
+											</Button>
+											<Button
+												size="sm"
+												fill="paper"
+												className="flex-1"
+												icon={FileText}
+												onClick={() => pdfInput.current?.click()}
+											>
+												PDF
+											</Button>
+										</div>
+									</div>
+								)}
+							</Step>
+						}
 
-					{(canUpload || progress !== null) && (
-						<Button icon={Upload} disabled={!canUpload} onClick={upload}>
-							{progress ??
-								`Upload ${pageCount} page${pageCount === 1 ? "" : "s"}`}
-						</Button>
-					)}
-				</div>
-			</Card>
+						{error !== null && <ErrorNote error={error} />}
+
+						{(canUpload || progress !== null) && (
+							<Button icon={Upload} disabled={!canUpload} onClick={upload}>
+								{progress ??
+									`Upload ${pageCount} page${pageCount === 1 ? "" : "s"}`}
+							</Button>
+						)}
+					</div>
+				</Card>
+			</DropZone>
 
 			{done !== null && (
 				<Card fill="lime">
@@ -568,5 +584,50 @@ function RemoveButton({
 		>
 			<X aria-hidden="true" className="size-3.5" strokeWidth={3.5} />
 		</button>
+	);
+}
+
+/** Files can be dropped anywhere on the upload card; it shows where while dragging. */
+function DropZone({
+	enabled,
+	onDrop,
+	children,
+}: {
+	enabled: boolean;
+	onDrop: (files: File[]) => void;
+	children: ReactNode;
+}) {
+	// dragenter/dragleave fire for every child crossed, so count them.
+	const [depth, setDepth] = useState(0);
+	const over = enabled && depth > 0;
+	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: dropping is an extra to the buttons
+		<div
+			className="relative"
+			onDragEnter={(e) => {
+				if (!e.dataTransfer.types.includes("Files")) return;
+				e.preventDefault();
+				setDepth((d) => d + 1);
+			}}
+			onDragLeave={() => setDepth((d) => Math.max(0, d - 1))}
+			onDragOver={(e) => {
+				if (!e.dataTransfer.types.includes("Files")) return;
+				e.preventDefault();
+				e.dataTransfer.dropEffect = enabled ? "copy" : "none";
+			}}
+			onDrop={(e) => {
+				e.preventDefault();
+				setDepth(0);
+				if (enabled) onDrop(Array.from(e.dataTransfer.files));
+			}}
+		>
+			{children}
+			{over && (
+				<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-[18px] border-[3px] border-dashed border-ink bg-lavender-soft/95 font-display text-xl font-extrabold">
+					<Upload aria-hidden="true" className="size-8" strokeWidth={2.5} />
+					Drop here
+				</div>
+			)}
+		</div>
 	);
 }
