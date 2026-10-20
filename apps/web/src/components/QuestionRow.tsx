@@ -24,6 +24,7 @@ export function QuestionRow({
 					page={q.page_number}
 					number={q.number}
 				/>
+				{q.kind === "theory" && <Chip fill="paper">Theory</Chip>}
 				{q.needs_check && !q.resolved_at && (
 					<Reasons reasons={q.check_reasons} />
 				)}

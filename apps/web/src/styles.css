@@ -11,6 +11,8 @@
   --color-muted: #6b6157;
   --color-faint: #8a8177;
   --color-on-dark-muted: #a79e92;
+  /* Input wells: a shade below cream so they read on cards and on the page. */
+  --color-well: #f3eee1;
 
   --font-display: "Baloo 2", Nunito, system-ui, sans-serif;
   --font-sans: Nunito, system-ui, sans-serif;
@@ -38,4 +40,39 @@ body {
 .hl {
   background: var(--color-lime);
   padding: 0 3px;
+}
+
+/* Inputs are wells pressed into the card, the opposite of the raised sticker
+   blocks: a fill a shade below cream, a thinner outline, a smaller radius and a flat (unblurred)
+   inset lip along the top. Focus lifts the well to white with a lime ring. */
+.field {
+  width: 100%;
+  background: var(--color-well);
+  border: 2px solid var(--color-ink);
+  border-radius: 10px;
+  box-shadow: inset 0 4px 0 rgb(22 19 15 / 0.12);
+  padding: 0.6rem 0.75rem 0.55rem;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink);
+  outline: none;
+  transition: background-color 0.1s;
+}
+.field::placeholder {
+  color: var(--color-faint);
+  font-weight: 600;
+}
+.field:focus {
+  background: var(--color-paper);
+  outline: 3px solid var(--color-lime);
+  outline-offset: 1px;
+}
+.field:disabled {
+  opacity: 0.6;
+}
+textarea.field {
+  field-sizing: content;
+  min-height: 2.75rem;
+  line-height: 1.35;
+  resize: vertical;
 }

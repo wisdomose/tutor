@@ -543,6 +543,56 @@
         }
       }
     },
+    "/questions/{id}/merge": {
+      "post": {
+        "tags": [],
+        "summary": "A reviewer decided two questions are one. This one's appearances move to `into`,\nblanks there are filled from this one (including options it lacks, which sends it\nback for review as its answer may change), and this one is deleted.",
+        "operationId": "merge_question",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuestionDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/questions/{id}/resolve": {
       "post": {
         "tags": [],
@@ -834,6 +884,44 @@
   },
   "components": {
     "schemas": {
+      "Appearance": {
+        "type": "object",
+        "required": [
+          "source_id",
+          "source",
+          "page_id",
+          "number",
+          "photo_url"
+        ],
+        "properties": {
+          "number": {
+            "type": "string",
+            "description": "As printed in this source."
+          },
+          "page_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "page_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "As printed."
+          },
+          "photo_url": {
+            "type": "string",
+            "description": "API path of the page photo."
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "Diagram": {
         "type": "object",
         "required": [
@@ -977,6 +1065,19 @@
           },
           "storage": {
             "type": "string"
+          }
+        }
+      },
+      "MergeRequest": {
+        "type": "object",
+        "required": [
+          "into"
+        ],
+        "properties": {
+          "into": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The question to keep."
           }
         }
       },
@@ -1223,6 +1324,95 @@
           }
         }
       },
+      "PartDetail": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "depth"
+        ],
+        "properties": {
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "closing_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "depth": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "diagram": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Diagram"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string",
+            "description": "\"a\", \"ii\""
+          },
+          "marks": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "PartEdit": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "closing_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "marks": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "PdfUpload": {
         "type": "object",
         "required": [
@@ -1244,9 +1434,19 @@
           {
             "type": "object",
             "required": [
-              "options"
+              "options",
+              "parts",
+              "appearances",
+              "related"
             ],
             "properties": {
+              "appearances": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Appearance"
+                },
+                "description": "Every page that prints it, first seen first."
+              },
               "confidence": {
                 "type": [
                   "string",
@@ -1265,6 +1465,21 @@
                   }
                 ]
               },
+              "exam": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "e.g. \"WAEC WASSCE\"."
+              },
+              "exam_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid",
+                "description": "Where it was set. The exam's level matches the subject's."
+              },
               "explanation": {
                 "type": [
                   "string",
@@ -1282,6 +1497,13 @@
                   }
                 ]
               },
+              "marks": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "format": "double"
+              },
               "next_flagged_id": {
                 "type": [
                   "string",
@@ -1296,12 +1518,39 @@
                   "$ref": "#/components/schemas/OptionDetail"
                 }
               },
+              "original_number": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Its number in that exam."
+              },
+              "paper": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "parts": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PartDetail"
+                },
+                "description": "Theory parts in printed order; `depth` 0 is (a), 1 is (a)(i)."
+              },
               "photo_url": {
                 "type": [
                   "string",
                   "null"
                 ],
                 "description": "Photo of the page it was first seen on; none for our own questions."
+              },
+              "related": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RelatedQuestion"
+                },
+                "description": "Other questions with the same exam, year, number and kind (possible duplicates)."
               },
               "second_answer": {
                 "type": [
@@ -1315,6 +1564,20 @@
                   "string",
                   "null"
                 ]
+              },
+              "sitting": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "may_june, june_july or nov_dec."
+              },
+              "year": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int32"
               }
             }
           }
@@ -1329,7 +1592,8 @@
         ],
         "properties": {
           "body": {
-            "type": "string"
+            "type": "string",
+            "description": "May be empty for a theory question whose text is all in its parts."
           },
           "correct_option_id": {
             "type": [
@@ -1339,11 +1603,26 @@
             "format": "uuid",
             "description": "The option to mark correct; null leaves the question without an answer."
           },
+          "exam_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Where it was set; these replace the saved values."
+          },
           "explanation": {
             "type": [
               "string",
               "null"
             ]
+          },
+          "marks": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
           },
           "options": {
             "type": "array",
@@ -1351,9 +1630,35 @@
               "$ref": "#/components/schemas/OptionEdit"
             }
           },
+          "original_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paper": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartEdit"
+            },
+            "description": "Theory parts; parts not listed are left as they are."
+          },
           "resolve": {
             "type": "boolean",
             "description": "Also mark the question as checked."
+          },
+          "sitting": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "may_june, june_july or nov_dec."
           },
           "topic_id": {
             "type": [
@@ -1362,6 +1667,13 @@
             ],
             "format": "uuid",
             "description": "Syllabus topic; must belong to the question's subject."
+          },
+          "year": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -1572,6 +1884,60 @@
               "null"
             ],
             "description": "What was wrong, e.g. \"label III should point to the rhizoids\"."
+          }
+        }
+      },
+      "RelatedQuestion": {
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "body",
+          "option_count",
+          "part_count"
+        ],
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "option_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paper": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "part_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sitting": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },

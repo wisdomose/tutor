@@ -41,6 +41,7 @@ const MAX_PDF_BYTES: usize = 200 * 1024 * 1024;
         get_question,
         update_question,
         resolve_question,
+        merge_question,
         delete_question,
         update_group,
         redraw_diagram,
@@ -83,6 +84,7 @@ pub fn router() -> Router<AppState> {
                 .delete(delete_question),
         )
         .route("/questions/{id}/resolve", post(resolve_question))
+        .route("/questions/{id}/merge", post(merge_question))
         .route("/groups/{id}", axum::routing::put(update_group))
         .route("/diagrams/{id}/svg", get(diagram_svg))
         .route("/diagrams/{id}/redraw", post(redraw_diagram))
@@ -989,6 +991,23 @@ pub struct QuestionDetail {
     /// The question's own diagram, or the shared one from its group.
     diagram: Option<Diagram>,
     options: Vec<OptionDetail>,
+    /// Theory parts in printed order; `depth` 0 is (a), 1 is (a)(i).
+    parts: Vec<PartDetail>,
+    /// Where it was set. The exam's level matches the subject's.
+    exam_id: Option<Uuid>,
+    /// e.g. "WAEC WASSCE".
+    exam: Option<String>,
+    year: Option<i32>,
+    paper: Option<String>,
+    /// may_june, june_july or nov_dec.
+    sitting: Option<String>,
+    /// Its number in that exam.
+    original_number: Option<String>,
+    marks: Option<f64>,
+    /// Every page that prints it, first seen first.
+    appearances: Vec<Appearance>,
+    /// Other questions with the same exam, year, number and kind (possible duplicates).
+    related: Vec<RelatedQuestion>,
     /// Photo of the page it was first seen on; none for our own questions.
     photo_url: Option<String>,
     /// Next flagged, unresolved question in book order (for "Looks right → next").
@@ -1015,6 +1034,46 @@ async fn load_diagram(s: &AppState, id: Option<Uuid>) -> sqlx::Result<Option<Dia
     }))
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct PartDetail {
+    id: Uuid,
+    parent_id: Option<Uuid>,
+    /// "a", "ii"
+    label: String,
+    depth: i32,
+    body: Option<String>,
+    closing_text: Option<String>,
+    marks: Option<f64>,
+    diagram: Option<Diagram>,
+}
+
+#[derive(Serialize, ToSchema, sqlx::FromRow)]
+pub struct Appearance {
+    source_id: Uuid,
+    source: String,
+    page_id: Uuid,
+    /// As printed.
+    page_number: Option<String>,
+    /// As printed in this source.
+    number: String,
+    /// API path of the page photo.
+    #[sqlx(skip)]
+    photo_url: String,
+}
+
+#[derive(Serialize, ToSchema, sqlx::FromRow)]
+pub struct RelatedQuestion {
+    id: Uuid,
+    source: Option<String>,
+    page_number: Option<String>,
+    number: String,
+    body: String,
+    sitting: Option<String>,
+    paper: Option<String>,
+    option_count: i64,
+    part_count: i64,
+}
+
 #[derive(sqlx::FromRow)]
 struct QuestionExtra {
     explanation: Option<String>,
@@ -1022,6 +1081,24 @@ struct QuestionExtra {
     second_answer: Option<String>,
     second_explanation: Option<String>,
     group_id: Option<Uuid>,
+    diagram_id: Option<Uuid>,
+    exam_id: Option<Uuid>,
+    exam: Option<String>,
+    year: Option<i32>,
+    paper: Option<String>,
+    sitting: Option<String>,
+    original_number: Option<String>,
+    marks: Option<f64>,
+}
+
+#[derive(sqlx::FromRow)]
+struct PartRow {
+    id: Uuid,
+    parent_id: Option<Uuid>,
+    label: String,
+    body: Option<String>,
+    closing_text: Option<String>,
+    marks: Option<f64>,
     diagram_id: Option<Uuid>,
 }
 
@@ -1049,8 +1126,12 @@ async fn question_detail(s: &AppState, id: Uuid) -> Result<QuestionDetail, ApiEr
         .await?;
     let extra: QuestionExtra = sqlx::query_as(
         "select q.explanation, q.confidence, q.second_answer, q.second_explanation, q.group_id,
-                coalesce(q.diagram_id, g.diagram_id) as diagram_id
-         from questions q left join question_groups g on g.id = q.group_id where q.id = $1",
+                coalesce(q.diagram_id, g.diagram_id) as diagram_id,
+                q.exam_id, b.code || ' ' || e.code as exam, q.year, q.paper, q.sitting,
+                q.original_number, q.marks::float8 as marks
+         from questions q left join question_groups g on g.id = q.group_id
+           left join exams e on e.id = q.exam_id left join exam_bodies b on b.id = e.body_id
+         where q.id = $1",
     )
     .bind(id)
     .fetch_one(&s.db)
@@ -1071,6 +1152,57 @@ async fn question_detail(s: &AppState, id: Uuid) -> Result<QuestionDetail, ApiEr
             diagram: load_diagram(s, o.diagram_id).await?,
         });
     }
+    let part_rows: Vec<PartRow> = sqlx::query_as(
+        "select id, parent_id, label, body, closing_text, marks::float8 as marks, diagram_id
+         from question_parts where question_id = $1 order by position",
+    )
+    .bind(id)
+    .fetch_all(&s.db)
+    .await?;
+    let mut depths: std::collections::HashMap<Uuid, i32> = std::collections::HashMap::new();
+    let mut parts = Vec::new();
+    for p in part_rows {
+        let depth = p
+            .parent_id
+            .and_then(|parent| depths.get(&parent))
+            .map_or(0, |d| d + 1);
+        depths.insert(p.id, depth);
+        parts.push(PartDetail {
+            id: p.id,
+            parent_id: p.parent_id,
+            label: p.label,
+            depth,
+            body: p.body,
+            closing_text: p.closing_text,
+            marks: p.marks,
+            diagram: load_diagram(s, p.diagram_id).await?,
+        });
+    }
+    let mut appearances: Vec<Appearance> = sqlx::query_as(
+        "select a.source_id, src.title as source, a.page_id, a.page_number, a.number
+         from question_appearances a join sources src on src.id = a.source_id
+         where a.question_id = $1 order by a.created_at",
+    )
+    .bind(id)
+    .fetch_all(&s.db)
+    .await?;
+    for a in &mut appearances {
+        a.photo_url = format!("/pages/{}/photo", a.page_id);
+    }
+    let related: Vec<RelatedQuestion> = sqlx::query_as(
+        "select o.id, src.title as source, o.page_number, o.number, o.body, o.sitting, o.paper,
+                (select count(*) from options x where x.question_id = o.id) as option_count,
+                (select count(*) from question_parts x where x.question_id = o.id) as part_count
+         from questions q
+         join questions o on o.id <> q.id and o.subject_id = q.subject_id and o.kind = q.kind
+           and o.exam_id = q.exam_id and o.year = q.year and o.original_number = q.original_number
+         left join sources src on src.id = o.source_id
+         where q.id = $1
+         order by o.created_at",
+    )
+    .bind(id)
+    .fetch_all(&s.db)
+    .await?;
     let next_flagged_id: Option<Uuid> = sqlx::query_scalar(&format!(
         "with ordered as (
            select q.id, row_number() over (order by {QUESTION_ORDER}) as n
@@ -1094,6 +1226,16 @@ async fn question_detail(s: &AppState, id: Uuid) -> Result<QuestionDetail, ApiEr
         group: load_group(s, extra.group_id).await?,
         diagram: load_diagram(s, extra.diagram_id).await?,
         options,
+        parts,
+        exam_id: extra.exam_id,
+        exam: extra.exam,
+        year: extra.year,
+        paper: extra.paper,
+        sitting: extra.sitting,
+        original_number: extra.original_number,
+        marks: extra.marks,
+        appearances,
+        related,
         photo_url,
         next_flagged_id,
     })
@@ -1106,7 +1248,16 @@ pub struct OptionEdit {
 }
 
 #[derive(Deserialize, ToSchema)]
+pub struct PartEdit {
+    id: Uuid,
+    body: Option<String>,
+    closing_text: Option<String>,
+    marks: Option<f64>,
+}
+
+#[derive(Deserialize, ToSchema)]
 pub struct QuestionEdit {
+    /// May be empty for a theory question whose text is all in its parts.
     body: String,
     /// Syllabus topic; must belong to the question's subject.
     topic_id: Option<Uuid>,
@@ -1114,8 +1265,24 @@ pub struct QuestionEdit {
     options: Vec<OptionEdit>,
     /// The option to mark correct; null leaves the question without an answer.
     correct_option_id: Option<Uuid>,
+    /// Theory parts; parts not listed are left as they are.
+    #[serde(default)]
+    parts: Vec<PartEdit>,
+    /// Where it was set; these replace the saved values.
+    exam_id: Option<Uuid>,
+    year: Option<i32>,
+    paper: Option<String>,
+    /// may_june, june_july or nov_dec.
+    sitting: Option<String>,
+    original_number: Option<String>,
+    marks: Option<f64>,
     /// Also mark the question as checked.
     resolve: bool,
+}
+
+/// Trims text and turns blanks into none.
+fn trimmed(text: Option<&str>) -> Option<&str> {
+    text.map(str::trim).filter(|t| !t.is_empty())
 }
 
 /// Saves a reviewer's corrections.
@@ -1126,8 +1293,40 @@ async fn update_question(
     Path(id): Path<Uuid>,
     Json(edit): Json<QuestionEdit>,
 ) -> ApiResult<QuestionDetail> {
-    if edit.body.trim().is_empty() {
+    let kind: String = sqlx::query_scalar("select kind from questions where id = $1")
+        .bind(id)
+        .fetch_one(&s.db)
+        .await?;
+    if edit.body.trim().is_empty() && kind != "theory" {
         return Err(bad_request("the question text can't be empty"));
+    }
+    if let Some(year) = edit.year
+        && !(1950..=2100).contains(&year)
+    {
+        return Err(bad_request("that year doesn't look right"));
+    }
+    let sitting = trimmed(edit.sitting.as_deref());
+    if let Some(sitting) = sitting
+        && !["may_june", "june_july", "nov_dec"].contains(&sitting)
+    {
+        return Err(bad_request(
+            "sitting must be may_june, june_july or nov_dec",
+        ));
+    }
+    if let Some(exam_id) = edit.exam_id {
+        let fits: bool = sqlx::query_scalar(
+            "select exists(select 1 from exams e join subjects s on s.level = e.level
+               join questions q on q.subject_id = s.id where e.id = $1 and q.id = $2)",
+        )
+        .bind(exam_id)
+        .bind(id)
+        .fetch_one(&s.db)
+        .await?;
+        if !fits {
+            return Err(bad_request(
+                "that exam is for a different level than the subject",
+            ));
+        }
     }
     if let Some(topic_id) = edit.topic_id {
         let fits: bool = sqlx::query_scalar(
@@ -1147,7 +1346,9 @@ async fn update_question(
     let mut tx = s.db.begin().await?;
     sqlx::query(
         "update questions set body = $2, topic_id = $3, explanation = $4,
-           resolved_at = case when $5 then now() else resolved_at end
+           resolved_at = case when $5 then now() else resolved_at end,
+           exam_id = $6, year = $7, paper = $8, sitting = $9, original_number = $10,
+           marks = $11::numeric
          where id = $1",
     )
     .bind(id)
@@ -1160,8 +1361,27 @@ async fn update_question(
             .filter(|t| !t.is_empty()),
     )
     .bind(edit.resolve)
+    .bind(edit.exam_id)
+    .bind(edit.year)
+    .bind(trimmed(edit.paper.as_deref()))
+    .bind(sitting)
+    .bind(trimmed(edit.original_number.as_deref()))
+    .bind(edit.marks)
     .execute(&mut *tx)
     .await?;
+    for p in &edit.parts {
+        sqlx::query(
+            "update question_parts set body = $3, closing_text = $4, marks = $5::numeric
+             where id = $1 and question_id = $2",
+        )
+        .bind(p.id)
+        .bind(id)
+        .bind(trimmed(p.body.as_deref()))
+        .bind(trimmed(p.closing_text.as_deref()))
+        .bind(p.marks)
+        .execute(&mut *tx)
+        .await?;
+    }
     for o in &edit.options {
         sqlx::query(
             "update options set body = $3 where id = $1 and question_id = $2
@@ -1204,6 +1424,82 @@ async fn resolve_question(
         .execute(&s.db)
         .await?;
     Ok(Json(question_detail(&s, id).await?))
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct MergeRequest {
+    /// The question to keep.
+    into: Uuid,
+}
+
+/// A reviewer decided two questions are one. This one's appearances move to `into`,
+/// blanks there are filled from this one (including options it lacks, which sends it
+/// back for review as its answer may change), and this one is deleted.
+#[utoipa::path(post, path = "/questions/{id}/merge", request_body = MergeRequest,
+    responses((status = 200, body = QuestionDetail), (status = 400, body = ErrorBody)))]
+async fn merge_question(
+    State(s): State<AppState>,
+    Path(id): Path<Uuid>,
+    Json(m): Json<MergeRequest>,
+) -> ApiResult<QuestionDetail> {
+    if m.into == id {
+        return Err(bad_request("a question can't be merged into itself"));
+    }
+    let fits: bool = sqlx::query_scalar(
+        "select exists(select 1 from questions a join questions b
+           on b.subject_id = a.subject_id and b.kind = a.kind where a.id = $1 and b.id = $2)",
+    )
+    .bind(id)
+    .bind(m.into)
+    .fetch_one(&s.db)
+    .await?;
+    if !fits {
+        return Err(bad_request(
+            "only questions of the same subject and kind can be merged",
+        ));
+    }
+    let mut tx = s.db.begin().await?;
+    sqlx::query("update question_appearances set question_id = $2 where question_id = $1")
+        .bind(id)
+        .bind(m.into)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "update questions k set sitting = coalesce(k.sitting, d.sitting), paper = coalesce(k.paper, d.paper),
+           topic_id = coalesce(k.topic_id, d.topic_id), marks = coalesce(k.marks, d.marks),
+           diagram_id = coalesce(k.diagram_id, d.diagram_id)
+         from questions d where k.id = $2 and d.id = $1",
+    )
+    .bind(id)
+    .bind(m.into)
+    .execute(&mut *tx)
+    .await?;
+    let added = sqlx::query(
+        "insert into options (question_id, label, body, diagram_id, is_correct)
+         select $2, label, body, diagram_id, false from options where question_id = $1
+         on conflict (question_id, label) do nothing",
+    )
+    .bind(id)
+    .bind(m.into)
+    .execute(&mut *tx)
+    .await?;
+    if added.rows_affected() > 0 {
+        sqlx::query(
+            "update questions set needs_check = true, resolved_at = null,
+               check_reasons = case when 'options_added' = any(check_reasons) then check_reasons
+                                    else array_append(check_reasons, 'options_added') end
+             where id = $1",
+        )
+        .bind(m.into)
+        .execute(&mut *tx)
+        .await?;
+    }
+    sqlx::query("delete from questions where id = $1")
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(Json(question_detail(&s, m.into).await?))
 }
 
 #[utoipa::path(delete, path = "/questions/{id}", responses((status = 204)))]

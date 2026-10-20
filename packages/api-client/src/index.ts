@@ -21,6 +21,9 @@ export type Diagram = Schemas['Diagram']
 export type OptionDetail = Schemas['OptionDetail']
 export type Health = Schemas['Health']
 export type QuestionGroup = Schemas['QuestionGroup']
+export type PartDetail = Schemas['PartDetail']
+export type Appearance = Schemas['Appearance']
+export type RelatedQuestion = Schemas['RelatedQuestion']
 
 export type CheckReason =
   | 'conflicting_answers'

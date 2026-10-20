@@ -183,4 +183,7 @@ text in WAEC 2015 and WAEC 2017 is two questions.
   worked examples, instruction pages and the facing page ignored.
 - Worker (done): each question is matched against the bank before answering, so
   a question already saved is not answered again.
+- Review screens (done): where it was set (editable), theory parts, every
+  page that prints a question with its photo, questions with the same exam
+  number with Merge, and filters by flag.
 - A question editor for our own questions.

@@ -152,8 +152,8 @@ export function OptionRow({
 	);
 }
 
-const control =
-	"w-full rounded-[13px] border-[2.5px] border-ink bg-paper px-3 py-2.5 text-[15px] font-bold text-ink outline-none focus:bg-cream disabled:opacity-60";
+/** Inputs are wells pressed into the card; see `.field` in styles.css. */
+const control = "field";
 
 export function Field({
 	label,
@@ -179,20 +179,34 @@ export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
 
 export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
 	return (
-		<textarea
-			rows={3}
-			{...props}
-			className={cx(control, "leading-snug", props.className)}
-		/>
+		<textarea rows={2} {...props} className={cx(control, props.className)} />
 	);
 }
 
-export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
+/** A native select in the same well, with a chevron. */
+export function Select({
+	className,
+	...props
+}: SelectHTMLAttributes<HTMLSelectElement>) {
 	return (
-		<select
-			{...props}
-			className={cx(control, "appearance-none pr-8", props.className)}
-		/>
+		<div className={cx("relative", className)}>
+			<select
+				{...props}
+				className={cx(control, "cursor-pointer appearance-none truncate pr-10")}
+			/>
+			<svg
+				aria-hidden="true"
+				viewBox="0 0 24 24"
+				className="pointer-events-none absolute top-1/2 right-3 size-5 -translate-y-1/2"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth={3}
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			>
+				<path d="m6 9 6 6 6-6" />
+			</svg>
+		</div>
 	);
 }
 

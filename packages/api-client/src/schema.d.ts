@@ -171,6 +171,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/questions/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A reviewer decided two questions are one. This one's appearances move to `into`,
+         *     blanks there are filled from this one (including options it lacks, which sends it
+         *     back for review as its answer may change), and this one is deleted.
+         */
+        post: operations["merge_question"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/questions/{id}/resolve": {
         parameters: {
             query?: never;
@@ -342,6 +363,19 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        Appearance: {
+            /** @description As printed in this source. */
+            number: string;
+            /** Format: uuid */
+            page_id: string;
+            /** @description As printed. */
+            page_number?: string | null;
+            /** @description API path of the page photo. */
+            photo_url: string;
+            source: string;
+            /** Format: uuid */
+            source_id: string;
+        };
         Diagram: {
             error?: string | null;
             /** Format: uuid */
@@ -384,6 +418,13 @@ export interface components {
             database: string;
             openai: string;
             storage: string;
+        };
+        MergeRequest: {
+            /**
+             * Format: uuid
+             * @description The question to keep.
+             */
+            into: string;
         };
         NewSource: {
             edition?: string | null;
@@ -459,6 +500,29 @@ export interface components {
             /** @description The last question runs onto the next page, which hasn't been processed yet. */
             waiting_for_next_page: boolean;
         };
+        PartDetail: {
+            body?: string | null;
+            closing_text?: string | null;
+            /** Format: int32 */
+            depth: number;
+            diagram?: null | components["schemas"]["Diagram"];
+            /** Format: uuid */
+            id: string;
+            /** @description "a", "ii" */
+            label: string;
+            /** Format: double */
+            marks?: number | null;
+            /** Format: uuid */
+            parent_id?: string | null;
+        };
+        PartEdit: {
+            body?: string | null;
+            closing_text?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: double */
+            marks?: number | null;
+        };
         PdfUpload: {
             /**
              * Format: uuid
@@ -467,39 +531,77 @@ export interface components {
             upload_id: string;
         };
         QuestionDetail: components["schemas"]["QuestionSummary"] & {
+            /** @description Every page that prints it, first seen first. */
+            appearances: components["schemas"]["Appearance"][];
             /** @description gpt-6.1-sol's confidence in the saved answer. */
             confidence?: string | null;
             diagram?: null | components["schemas"]["Diagram"];
+            /** @description e.g. "WAEC WASSCE". */
+            exam?: string | null;
+            /**
+             * Format: uuid
+             * @description Where it was set. The exam's level matches the subject's.
+             */
+            exam_id?: string | null;
             explanation?: string | null;
             group?: null | components["schemas"]["QuestionGroup"];
+            /** Format: double */
+            marks?: number | null;
             /**
              * Format: uuid
              * @description Next flagged, unresolved question in book order (for "Looks right → next").
              */
             next_flagged_id?: string | null;
             options: components["schemas"]["OptionDetail"][];
+            /** @description Its number in that exam. */
+            original_number?: string | null;
+            paper?: string | null;
+            /** @description Theory parts in printed order; `depth` 0 is (a), 1 is (a)(i). */
+            parts: components["schemas"]["PartDetail"][];
             /** @description Photo of the page it was first seen on; none for our own questions. */
             photo_url?: string | null;
+            /** @description Other questions with the same exam, year, number and kind (possible duplicates). */
+            related: components["schemas"]["RelatedQuestion"][];
             /** @description gpt-6-luna's pick (an option label) and reasoning. */
             second_answer?: string | null;
             second_explanation?: string | null;
+            /** @description may_june, june_july or nov_dec. */
+            sitting?: string | null;
+            /** Format: int32 */
+            year?: number | null;
         };
         QuestionEdit: {
+            /** @description May be empty for a theory question whose text is all in its parts. */
             body: string;
             /**
              * Format: uuid
              * @description The option to mark correct; null leaves the question without an answer.
              */
             correct_option_id?: string | null;
+            /**
+             * Format: uuid
+             * @description Where it was set; these replace the saved values.
+             */
+            exam_id?: string | null;
             explanation?: string | null;
+            /** Format: double */
+            marks?: number | null;
             options: components["schemas"]["OptionEdit"][];
+            original_number?: string | null;
+            paper?: string | null;
+            /** @description Theory parts; parts not listed are left as they are. */
+            parts?: components["schemas"]["PartEdit"][];
             /** @description Also mark the question as checked. */
             resolve: boolean;
+            /** @description may_june, june_july or nov_dec. */
+            sitting?: string | null;
             /**
              * Format: uuid
              * @description Syllabus topic; must belong to the question's subject.
              */
             topic_id?: string | null;
+            /** Format: int32 */
+            year?: number | null;
         };
         QuestionGroup: {
             /**
@@ -576,6 +678,20 @@ export interface components {
         RedrawRequest: {
             /** @description What was wrong, e.g. "label III should point to the rhizoids". */
             note?: string | null;
+        };
+        RelatedQuestion: {
+            body: string;
+            /** Format: uuid */
+            id: string;
+            number: string;
+            /** Format: int64 */
+            option_count: number;
+            page_number?: string | null;
+            paper?: string | null;
+            /** Format: int64 */
+            part_count: number;
+            sitting?: string | null;
+            source?: string | null;
         };
         Source: {
             /** Format: date-time */
@@ -1010,6 +1126,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    merge_question: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuestionDetail"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
             };
         };
     };

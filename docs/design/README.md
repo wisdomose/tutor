@@ -24,6 +24,7 @@ than restyling from scratch.
 | `muted` | `#6B6157` | Secondary text |
 | `faint` | `#8A8177` | Disabled / not-yet text |
 | `on-dark-muted` | `#A79E92` | Secondary text on ink |
+| `well` | `#F3EEE1` | Input fill: a shade below cream |
 
 ## Type
 
@@ -60,6 +61,17 @@ onto the base.
 
 Lime = primary, white = secondary, lavender = alternative. One lime button per
 area.
+
+## Inputs
+
+Blocks and buttons are raised stickers; inputs are **wells** pressed into them,
+so a field never looks like a card. `.field` in `styles.css`, used by
+`TextInput`, `TextArea` and `Select` in `ui.tsx`:
+
+- `well` fill, a thinner **2px** ink outline and a smaller **10px** radius.
+- A flat 4px inset lip along the top (`inset 0 4px 0`, ink at 12%), with no blur.
+- Focus: white fill and a 3px lime ring, which shows on white, lavender and cream.
+- Selects add a chevron-down on the right. Text areas grow with their text.
 
 ## States
 
