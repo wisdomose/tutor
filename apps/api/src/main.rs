@@ -5,6 +5,7 @@
 //!
 //! `tutor-api openapi` prints the OpenAPI document and exits.
 
+mod matcher;
 mod prompts;
 mod routes;
 mod worker;

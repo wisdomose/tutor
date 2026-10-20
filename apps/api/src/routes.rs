@@ -726,11 +726,41 @@ async fn page_photo(State(s): State<AppState>, Path(id): Path<Uuid>) -> Result<R
 }
 
 /// Removes a page's questions, groups and diagrams (not the page or photo).
+/// A question first seen here that another page also prints moves to that page instead.
 async fn clear_page(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: Uuid) -> sqlx::Result<()> {
     sqlx::query("delete from question_appearances where page_id = $1")
         .bind(id)
         .execute(&mut **tx)
         .await?;
+    sqlx::query(
+        "update questions q set source_id = a.source_id, page_id = a.page_id,
+           page_number = a.page_number, number = a.number
+         from (select distinct on (question_id) * from question_appearances
+               order by question_id, created_at) a
+         where a.question_id = q.id and q.page_id = $1",
+    )
+    .bind(id)
+    .execute(&mut **tx)
+    .await?;
+    // Its groups and diagrams go with it, as do any a saved question took from this page.
+    sqlx::query(
+        "update question_groups g set page_id = q.page_id from questions q
+         where q.group_id = g.id and g.page_id = $1 and q.page_id <> $1",
+    )
+    .bind(id)
+    .execute(&mut **tx)
+    .await?;
+    sqlx::query(
+        "update diagrams d set page_id = q.page_id from questions q
+         where d.page_id = $1 and q.page_id <> $1
+           and (q.diagram_id = d.id
+             or exists (select 1 from question_groups g where g.id = q.group_id and g.diagram_id = d.id)
+             or exists (select 1 from options o where o.question_id = q.id and o.diagram_id = d.id)
+             or exists (select 1 from question_parts p where p.question_id = q.id and p.diagram_id = d.id))",
+    )
+    .bind(id)
+    .execute(&mut **tx)
+    .await?;
     sqlx::query("delete from questions where page_id = $1")
         .bind(id)
         .execute(&mut **tx)

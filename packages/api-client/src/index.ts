@@ -27,14 +27,18 @@ export type CheckReason =
   | 'has_diagram'
   | 'low_confidence'
   | 'no_answer'
+  | 'possible_duplicate'
   | 'refers_to_number'
+  | 'source_conflict'
 
 export const checkReasonLabels: Record<CheckReason, string> = {
   conflicting_answers: 'Conflicting answers',
   has_diagram: 'Has diagram',
   low_confidence: 'Low confidence',
   no_answer: 'No answer',
+  possible_duplicate: 'Possible duplicate',
   refers_to_number: 'Refers to a question number',
+  source_conflict: 'Sources disagree',
 }
 
 export function createApiClient(baseUrl: string) {

@@ -45,6 +45,8 @@ pub struct Response {
 pub struct OpenAi {
     http: reqwest::Client,
     key: String,
+    /// `OPENAI_BASE_URL`, for a local stand-in when testing; the real API otherwise.
+    base_url: String,
 }
 
 impl OpenAi {
@@ -53,7 +55,15 @@ impl OpenAi {
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(10 * 60))
             .build()?;
-        Ok(Self { http, key })
+        let base_url = std::env::var("OPENAI_BASE_URL")
+            .ok()
+            .filter(|u| !u.is_empty())
+            .unwrap_or_else(|| "https://api.openai.com/v1".into());
+        Ok(Self {
+            http,
+            key,
+            base_url,
+        })
     }
 
     pub async fn respond(&self, req: Request<'_>) -> anyhow::Result<Response> {
@@ -83,7 +93,7 @@ impl OpenAi {
             attempt += 1;
             let res = self
                 .http
-                .post("https://api.openai.com/v1/responses")
+                .post(format!("{}/responses", self.base_url))
                 .bearer_auth(&self.key)
                 .json(&body)
                 .send()

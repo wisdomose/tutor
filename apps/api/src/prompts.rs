@@ -7,37 +7,152 @@ use serde_json::{Value, json};
 
 // ── Reading a page (Claude) ─────────────────────────────────────────────────
 
-pub const EXTRACT_SYSTEM: &str = "You digitise photographed pages of printed exam past-question books (WAEC, NECO, JAMB style) for a student revision app. You only transcribe; you never answer the questions.
+pub const EXTRACT_SYSTEM: &str = "You digitise pages of exam past-question books and exam papers (WAEC, NECO, NABTEB, JAMB) for a student revision app. Pages are phone photos or PDF scans. You only transcribe and classify; you never answer the questions.
 
 Reading the page:
-- The photo may be rotated, curved or unevenly lit. Read it in its natural orientation. Pages usually have two columns: read the left column top to bottom, then the right.
-- Extract only multiple-choice questions. Skip THEORY / essay questions, answer keys and running headers.
-- Copy question and option text exactly as printed, fixing only line-break hyphenation. Never paraphrase, correct the book's wording, or add words that are not printed.
+- The photo may be rotated, curved or unevenly lit. Read it in its natural orientation. Pages often have two columns: read the left column top to bottom, then the right.
+- Only read the page itself. Ignore the edge of a facing page, fingers, watermarks and website stamps (e.g. \"www.myschoolgist.com\", \"Uploaded on ...\"), running headers and footers, print timestamps and answer keys.
+- Skip instructions to candidates, cover pages and worked examples (\"Example\", \"Specimen answer\"); they are not questions.
+- Extract every question: multiple-choice (\"objective\", usually under OBJ) and written (\"theory\", under THEORY, ESSAY or Paper 2/3). Use question numbers exactly as printed, even when misnumbered.
+- Copy question and option text exactly as printed, fixing only line-break hyphenation. Never paraphrase, correct the wording, or add words that are not printed.
 - Options are often printed inline (\"A. fish. B. reptile. C. ...\"). Split them into separate options and drop the full stop that only separates them.
-- Ignore bracketed year tags such as [2018/2]; do not copy them.
 - Write mathematics and chemical formulae in LaTeX between $...$ (e.g. $H_2SO_4$, $\\frac{1}{2}mv^2$).
-- \"topic\" is the section heading the question sits under (e.g. \"Levels of Organization\"); null if no heading is visible above it on this page.
 - \"page_number\" is the page number printed on the paper (often in a corner), not a question number. Null if not visible.
-- Use question numbers exactly as printed, even when the printer has misnumbered.
+
+Theory questions:
+- \"body\" is the lead text before the first lettered part (may be empty). Each part goes in \"parts\" with its \"path\": the labels from the top, joined by \"/\" without brackets: (a) is \"a\", (a)(ii) is \"a/ii\", (b)(i) is \"b/i\". List parents before their children, in printed order.
+- A part's \"body\" is its own text only. A sentence printed after a part's sub-parts that belongs to that part (\"Give reasons for your answers in (d)(i) and (ii).\") is its \"closing_text\".
+- \"marks\" is the mark printed for the question or part (\"[4 marks]\", \"(2 marks)\"); null if none. Objective questions have no parts and null marks.
+- Tables to complete or fill in are written as Markdown tables in the text, with blank cells left empty.
+
+Where each question was set:
+- Books print a tag after each question, e.g. [2012/1], (2005/4) or [WAEC 2014, Q7]: the year and the question's number in that exam. Put them in \"year\" and \"original_number\". Do not copy the tag into the question text.
+- A page or section header can say which exam, year, paper or sitting the questions under it are from (\"BECE 2020 Mathematics\", \"WASSCE May/June 2015 Paper 2\", \"BECE/NECO/2020\"). Apply it to every question under it, and to the questions under the context carried from the previous page until the page shows a new one.
+- \"exam\" is one of the exam codes you are given, only if the page or carried context names it; WAEC's SSCE/WASSCE/GCE is WASSCE, NECO's SSCE is SSCE, the junior exam is BECE, JAMB's is UTME.
+- \"sitting\": may_june for May/June or WAEC June; june_july for June/July; nov_dec for Nov/Dec or GCE. Null if not printed.
+- \"paper\" as printed (\"1\", \"2\", \"3\"); null if not printed. OBJ/THEORY alone does not name a paper.
+- Leave any of these null when neither the page nor the carried context says. The app fills the rest from the source's details; never guess.
+- \"carry\" is the context in force at the bottom of the page, for the next page: the current section heading and any exam, year, paper and sitting a header set. Null fields where nothing is in force.
+
+Topics:
+- \"topic_ref\" is the syllabus topic the question is about, from the list you are given (e.g. \"t12\"). Pick the most specific topic that fits; a theme only if none of its topics does. A printed section heading is a strong hint, but the question's content decides. Null only if nothing in the list fits.
 
 Questions split across pages:
 - If the top of the page continues a question from the previous page (its beginning is not on this page), copy that continuation text exactly into \"head_fragment\" and do not extract it as a question.
-- If the last question on the page is cut off at the bottom (its end is on the next page), put its number, topic and all of its visible text (including any options shown) into \"tail_fragment\" and do not extract it as a question.
-- A question that is cut off by the photo edge rather than the page edge is also left out.
+- If the last question on the page is cut off at the bottom (its end is on the next page), put it in \"tail_fragment\" (its number, kind, topic_ref, the year/number from its tag if visible, and all its visible text including any options or parts) and do not extract it as a question.
+- A question cut off by the photo edge rather than the page edge is also left out.
 
 Diagrams and shared instructions:
-- When several questions share an instruction (\"The diagram below is an illustration of a fungus. Study it and answer questions 31 to 33\"), add a group with that instruction text and set group_ref on each of those questions. Do not repeat the instruction in their bodies.\n- Students see a group's questions together but renumbered, so also give \"display_instruction\": the same instruction with every reference to question numbers removed (\"The diagram below is an illustration of a fungus. Study it and answer questions 31 to 33\" becomes \"The diagram below is an illustration of a fungus.\"). Change nothing else. Use null if nothing is left.\n- Set \"refers_to_number\" to true when a question's own text or options mention another question by its number (e.g. \"using your answer to question 31\"); otherwise false.
-- Every printed diagram gets one entry in \"diagrams\". Reference it from the group if it is shared, from the question if only that question uses it, or from an option if the option itself is a picture (then the option body may be null).
+- When several questions share an instruction (\"The diagram below is an illustration of a fungus. Study it and answer questions 31 to 33\"), add a group with that instruction text and set group_ref on each of those questions. Do not repeat the instruction in their bodies.
+- Students see a group's questions together but renumbered, so also give \"display_instruction\": the same instruction with every reference to question numbers removed (\"The diagram below is an illustration of a fungus. Study it and answer questions 31 to 33\" becomes \"The diagram below is an illustration of a fungus.\"). Change nothing else. Use null if nothing is left.
+- Set \"refers_to_number\" to true when a question's own text, parts or options mention another question by its number (e.g. \"using your answer to question 31\"); otherwise false.
+- Every printed diagram gets one entry in \"diagrams\". Reference it from the group if it is shared, from the question or part if only that one uses it, or from an option if the option itself is a picture (then the option body may be null).
 - A diagram \"description\" must let an illustrator redraw it faithfully without seeing it: what it shows, layout and proportions, every part, and every printed label (letters, roman numerals, words) with exactly what each label's leader line points to. Never name a part that is not named on the page - that could give away an answer.";
 
-pub const EXTRACT_PROMPT: &str = "Digitise this page.";
+/// What the reader is told about the page beyond the image itself.
+pub struct PageContext<'a> {
+    pub source_title: &'a str,
+    pub source_kind: &'a str,
+    pub layout: &'a str,
+    pub subject: &'a str,
+    pub level: &'a str,
+    /// "WAEC WASSCE 1993 Paper 2 May/June" — the source's defaults, for orientation only.
+    pub source_exam: Option<String>,
+    /// Exam codes the reader may use, e.g. "WASSCE (WAEC)".
+    pub exam_codes: Vec<String>,
+    /// From the previous page, as JSON.
+    pub carried: Option<&'a serde_json::Value>,
+    /// (ref, "Theme > Topic") in syllabus order.
+    pub topics: Vec<(String, String)>,
+}
+
+pub fn extract_prompt(c: &PageContext) -> String {
+    let layout = match c.layout {
+        "by_topic" => "a book arranged by topic",
+        "by_year" => "a book arranged by year",
+        _ => "a single exam paper",
+    };
+    let mut p = format!(
+        "Digitise this page.\n\nSource: \"{}\" ({}, {}). Subject: {} ({}).",
+        c.source_title,
+        c.source_kind,
+        layout,
+        c.subject,
+        c.level.to_uppercase()
+    );
+    if let Some(exam) = &c.source_exam {
+        p += &format!(
+            " The source's details say: {exam}. Don't copy these into questions; the app fills them in."
+        );
+    }
+    p += &format!("\n\nExam codes: {}.", c.exam_codes.join(", "));
+    match c.carried {
+        Some(carried) => p += &format!("\n\nCarried from the previous page: {carried}"),
+        None => p += "\n\nNothing is carried from a previous page.",
+    }
+    p += "\n\nSyllabus topics (ref: theme > topic):";
+    for (r, name) in &c.topics {
+        p += &format!("\n{r}: {name}");
+    }
+    p
+}
 
 pub static EXTRACT_SCHEMA: LazyLock<Value> = LazyLock::new(|| {
     let nullable = json!({ "type": ["string", "null"] });
+    let year = json!({ "type": ["integer", "null"] });
+    let sitting =
+        json!({ "type": ["string", "null"], "enum": ["may_june", "june_july", "nov_dec", null] });
+    let marks = json!({ "type": ["number", "null"] });
+    let kind = json!({ "type": "string", "enum": ["objective", "theory"] });
+    let question = json!({
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["number", "kind", "topic_ref", "exam", "year", "paper", "sitting", "original_number",
+                     "body", "marks", "group_ref", "diagram_ref", "refers_to_number", "options", "parts"],
+        "properties": {
+            "number": { "type": "string" },
+            "kind": kind,
+            "topic_ref": nullable,
+            "exam": nullable,
+            "year": year,
+            "paper": nullable,
+            "sitting": sitting,
+            "original_number": nullable,
+            "body": { "type": "string" },
+            "marks": marks,
+            "group_ref": nullable,
+            "diagram_ref": nullable,
+            "refers_to_number": { "type": "boolean" },
+            "options": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["label", "body", "diagram_ref"],
+                    "properties": { "label": { "type": "string" }, "body": nullable, "diagram_ref": nullable }
+                }
+            },
+            "parts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["path", "body", "closing_text", "marks", "diagram_ref"],
+                    "properties": {
+                        "path": { "type": "string" },
+                        "body": nullable,
+                        "closing_text": nullable,
+                        "marks": marks,
+                        "diagram_ref": nullable
+                    }
+                }
+            }
+        }
+    });
     json!({
         "type": "object",
         "additionalProperties": false,
-        "required": ["page_number", "head_fragment", "tail_fragment", "diagrams", "groups", "questions"],
+        "required": ["page_number", "head_fragment", "tail_fragment", "carry", "diagrams", "groups", "questions"],
         "properties": {
             "page_number": nullable,
             "head_fragment": nullable,
@@ -47,10 +162,23 @@ pub static EXTRACT_SCHEMA: LazyLock<Value> = LazyLock::new(|| {
                     {
                         "type": "object",
                         "additionalProperties": false,
-                        "required": ["number", "topic", "text"],
-                        "properties": { "number": { "type": "string" }, "topic": nullable, "text": { "type": "string" } }
+                        "required": ["number", "kind", "topic_ref", "year", "original_number", "text"],
+                        "properties": {
+                            "number": { "type": "string" },
+                            "kind": kind,
+                            "topic_ref": nullable,
+                            "year": year,
+                            "original_number": nullable,
+                            "text": { "type": "string" }
+                        }
                     }
                 ]
+            },
+            "carry": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["heading", "exam", "year", "paper", "sitting"],
+                "properties": { "heading": nullable, "exam": nullable, "year": year, "paper": nullable, "sitting": sitting }
             },
             "diagrams": {
                 "type": "array",
@@ -70,31 +198,7 @@ pub static EXTRACT_SCHEMA: LazyLock<Value> = LazyLock::new(|| {
                     "properties": { "ref": { "type": "string" }, "instruction": nullable, "display_instruction": nullable, "diagram_ref": nullable }
                 }
             },
-            "questions": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "required": ["number", "topic", "body", "group_ref", "diagram_ref", "refers_to_number", "options"],
-                    "properties": {
-                        "number": { "type": "string" },
-                        "topic": nullable,
-                        "body": { "type": "string" },
-                        "group_ref": nullable,
-                        "diagram_ref": nullable,
-                        "refers_to_number": { "type": "boolean" },
-                        "options": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "additionalProperties": false,
-                                "required": ["label", "body", "diagram_ref"],
-                                "properties": { "label": { "type": "string" }, "body": nullable, "diagram_ref": nullable }
-                            }
-                        }
-                    }
-                }
-            }
+            "questions": { "type": "array", "items": question }
         }
     })
 });
@@ -104,6 +208,8 @@ pub struct Extraction {
     pub page_number: Option<String>,
     pub head_fragment: Option<String>,
     pub tail_fragment: Option<TailFragment>,
+    #[serde(default)]
+    pub carry: Option<Value>,
     pub diagrams: Vec<ExtractedDiagram>,
     pub groups: Vec<ExtractedGroup>,
     pub questions: Vec<ExtractedQuestion>,
@@ -112,8 +218,29 @@ pub struct Extraction {
 #[derive(Deserialize, serde::Serialize, Clone)]
 pub struct TailFragment {
     pub number: String,
-    pub topic: Option<String>,
+    #[serde(default = "objective")]
+    pub kind: String,
+    #[serde(default)]
+    pub topic_ref: Option<String>,
+    #[serde(default)]
+    pub year: Option<i32>,
+    #[serde(default)]
+    pub original_number: Option<String>,
     pub text: String,
+    /// Filled by the worker from `topic_ref` and the page's carried context, so the
+    /// join (which runs later, without the page) knows where the question was set.
+    #[serde(default)]
+    pub topic_id: Option<uuid::Uuid>,
+    #[serde(default)]
+    pub exam: Option<String>,
+    #[serde(default)]
+    pub paper: Option<String>,
+    #[serde(default)]
+    pub sitting: Option<String>,
+}
+
+fn objective() -> String {
+    "objective".into()
 }
 
 #[derive(Deserialize)]
@@ -137,8 +264,24 @@ pub struct ExtractedGroup {
 #[derive(Deserialize, Clone)]
 pub struct ExtractedQuestion {
     pub number: String,
-    pub topic: Option<String>,
+    #[serde(default = "objective")]
+    pub kind: String,
+    #[serde(default)]
+    pub topic_ref: Option<String>,
+    /// As printed on the page or carried from the previous one; the source fills the rest.
+    #[serde(default)]
+    pub exam: Option<String>,
+    #[serde(default)]
+    pub year: Option<i32>,
+    #[serde(default)]
+    pub paper: Option<String>,
+    #[serde(default)]
+    pub sitting: Option<String>,
+    #[serde(default)]
+    pub original_number: Option<String>,
     pub body: String,
+    #[serde(default)]
+    pub marks: Option<f64>,
     #[serde(default)]
     pub group_ref: Option<String>,
     #[serde(default)]
@@ -147,6 +290,8 @@ pub struct ExtractedQuestion {
     #[serde(default)]
     pub refers_to_number: bool,
     pub options: Vec<ExtractedOption>,
+    #[serde(default)]
+    pub parts: Vec<ExtractedPart>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -157,17 +302,38 @@ pub struct ExtractedOption {
     pub diagram_ref: Option<String>,
 }
 
+/// One part of a theory question; `path` is "a", "a/ii" etc.
+#[derive(Deserialize, serde::Serialize, Clone)]
+pub struct ExtractedPart {
+    pub path: String,
+    pub body: Option<String>,
+    #[serde(default)]
+    pub closing_text: Option<String>,
+    #[serde(default)]
+    pub marks: Option<f64>,
+    #[serde(default)]
+    pub diagram_ref: Option<String>,
+}
+
 // ── Joining a question split across two pages (gpt-6.1-sol, text only) ───────
 
-pub const JOIN_INSTRUCTIONS: &str = "A multiple-choice question from a printed exam book was split across two pages. You get the text from the bottom of the first page and the continuation from the top of the next. Join them into one question: copy the text exactly (only remove the break), split the options A-D into separate options, write maths in LaTeX between $...$, and do not answer it.";
+pub const JOIN_INSTRUCTIONS: &str = "A question from a printed exam book was split across two pages. You get its kind, the text from the bottom of the first page and the continuation from the top of the next. Join them into one question and copy the text exactly (only remove the break); write maths in LaTeX between $...$; do not answer it.
+- objective: split the options A-E into separate options; no parts.
+- theory: \"body\" is the lead text before the first lettered part; each part goes in \"parts\" with its path (\"a\", \"a/ii\"), its own text, any closing sentence that belongs to it, and its printed marks; no options.
+- A tag such as [2012/1] is the year and the question's number in that exam: put them in \"year\" and \"original_number\" (null if there is no tag) and leave the tag out of the text.";
 
 pub static JOIN_SCHEMA: LazyLock<Value> = LazyLock::new(|| {
+    let nullable = json!({ "type": ["string", "null"] });
+    let marks = json!({ "type": ["number", "null"] });
     json!({
         "type": "object",
         "additionalProperties": false,
-        "required": ["body", "options"],
+        "required": ["body", "year", "original_number", "marks", "options", "parts"],
         "properties": {
             "body": { "type": "string" },
+            "year": { "type": ["integer", "null"] },
+            "original_number": nullable,
+            "marks": marks,
             "options": {
                 "type": "array",
                 "items": {
@@ -175,6 +341,20 @@ pub static JOIN_SCHEMA: LazyLock<Value> = LazyLock::new(|| {
                     "additionalProperties": false,
                     "required": ["label", "body"],
                     "properties": { "label": { "type": "string" }, "body": { "type": "string" } }
+                }
+            },
+            "parts": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["path", "body", "closing_text", "marks"],
+                    "properties": {
+                        "path": { "type": "string" },
+                        "body": nullable,
+                        "closing_text": nullable,
+                        "marks": marks
+                    }
                 }
             }
         }
@@ -184,7 +364,15 @@ pub static JOIN_SCHEMA: LazyLock<Value> = LazyLock::new(|| {
 #[derive(Deserialize)]
 pub struct Joined {
     pub body: String,
+    #[serde(default)]
+    pub year: Option<i32>,
+    #[serde(default)]
+    pub original_number: Option<String>,
+    #[serde(default)]
+    pub marks: Option<f64>,
     pub options: Vec<JoinedOption>,
+    #[serde(default)]
+    pub parts: Vec<ExtractedPart>,
 }
 
 #[derive(Deserialize)]

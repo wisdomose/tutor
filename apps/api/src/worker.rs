@@ -1,5 +1,6 @@
-//! Background processing: uploaded pages → Claude reads them → gpt-6.1-sol and
-//! gpt-6-luna answer → questions saved and flagged → diagrams drawn by gpt-6.1-sol.
+//! Background processing: uploaded pages → Claude reads them → each question is
+//! matched against the bank → gpt-6.1-sol and gpt-6-luna answer the new objective
+//! ones → questions saved and flagged → diagrams drawn by gpt-6.1-sol.
 //!
 //! Pages are processed one at a time so the owner's Claude Pro allowance is not
 //! drained in one go. When Claude reports its usage limit the queue pauses until
@@ -18,6 +19,7 @@ use tutor_openai::{LUNA, Part, SOL};
 use uuid::Uuid;
 
 use crate::AppState;
+use crate::matcher::{self, Candidate, Decision, Key, Text};
 use crate::prompts::{self, Answer, Answers, Extraction, QuestionForAnswer, TailFragment};
 
 const MAX_ATTEMPTS: i32 = 3;
@@ -41,21 +43,236 @@ struct ClaimedPage {
 #[derive(sqlx::FromRow)]
 struct PageSource {
     source_id: Uuid,
+    title: String,
+    kind: String,
+    layout: String,
     subject_id: Uuid,
+    subject: String,
+    level: String,
     exam_id: Option<Uuid>,
     year: Option<i32>,
     paper: Option<String>,
     sitting: Option<String>,
+    position: i32,
 }
 
 async fn page_source(db: &PgPool, page_id: Uuid) -> sqlx::Result<PageSource> {
     sqlx::query_as(
-        "select s.id as source_id, s.subject_id, s.exam_id, s.year, s.paper, s.sitting
-         from pages p join sources s on s.id = p.source_id where p.id = $1",
+        "select s.id as source_id, s.title, s.kind, s.layout, s.subject_id, sub.name as subject, sub.level,
+                s.exam_id, s.year, s.paper, s.sitting, p.position
+         from pages p join sources s on s.id = p.source_id join subjects sub on sub.id = s.subject_id
+         where p.id = $1",
     )
     .bind(page_id)
     .fetch_one(db)
     .await
+}
+
+/// (id, body code, exam code, level).
+type ExamRow = (Uuid, String, String, String);
+
+async fn load_exams(db: &PgPool) -> sqlx::Result<Vec<ExamRow>> {
+    sqlx::query_as(
+        "select e.id, b.code, e.code, e.level from exams e join exam_bodies b on b.id = e.body_id
+         order by b.code, e.code",
+    )
+    .fetch_all(db)
+    .await
+}
+
+/// A subject's syllabus topics in syllabus order, labelled "Theme > Topic".
+async fn load_topics(db: &PgPool, subject_id: Uuid) -> sqlx::Result<Vec<(Uuid, String)>> {
+    sqlx::query_as(
+        "select t.id, case when p.id is null then t.name else p.name || ' > ' || t.name end
+         from syllabus_topics t left join syllabus_topics p on p.id = t.parent_id
+         where t.subject_id = $1
+         order by coalesce(p.position, t.position), coalesce(p.name, t.name), p.id is not null, t.position, t.name",
+    )
+    .bind(subject_id)
+    .fetch_all(db)
+    .await
+}
+
+const SITTINGS: [&str; 3] = ["may_june", "june_july", "nov_dec"];
+
+/// The source's defaults in words, e.g. "WAEC WASSCE, 1993, Paper 2, may_june".
+fn describe_defaults(src: &PageSource, exams: &[ExamRow]) -> Option<String> {
+    let exam = src
+        .exam_id
+        .and_then(|id| exams.iter().find(|e| e.0 == id))
+        .map(|e| format!("{} {}", e.1, e.2));
+    let parts: Vec<String> = [
+        exam,
+        src.year.map(|y| y.to_string()),
+        src.paper.as_ref().map(|p| format!("Paper {p}")),
+        src.sitting.clone(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    (!parts.is_empty()).then(|| parts.join(", "))
+}
+
+/// Where a question says it was set, as read; anything missing comes from the source.
+struct Printed<'a> {
+    exam: Option<&'a str>,
+    year: Option<i32>,
+    paper: Option<&'a str>,
+    sitting: Option<&'a str>,
+    original_number: Option<&'a str>,
+}
+
+fn resolve_key(src: &PageSource, exams: &[ExamRow], p: Printed, number: &str) -> Key {
+    let (exam_id, exam_code) = match p
+        .exam
+        .and_then(|e| matcher::find_exam(e, &src.level, exams))
+    {
+        Some(e) => (Some(e.0), Some(e.2.clone())),
+        None => (
+            src.exam_id,
+            src.exam_id
+                .and_then(|id| exams.iter().find(|e| e.0 == id))
+                .map(|e| e.2.clone()),
+        ),
+    };
+    // In a year-ordered book or a paper the printed number is the exam's own.
+    let original_number = p
+        .original_number
+        .map(norm_number)
+        .filter(|n| !n.is_empty())
+        .or_else(|| (src.layout != "by_topic").then(|| norm_number(number)));
+    Key {
+        exam_id,
+        exam_code,
+        year: p.year.filter(|y| (1950..=2100).contains(y)).or(src.year),
+        paper: p
+            .paper
+            .and_then(matcher::norm_paper)
+            .or_else(|| src.paper.clone()),
+        sitting: p
+            .sitting
+            .filter(|s| SITTINGS.contains(s))
+            .map(str::to_string)
+            .or_else(|| src.sitting.clone()),
+        original_number,
+    }
+}
+
+/// A question as read, before it is matched and saved.
+struct Draft {
+    kind: String,
+    number: String,
+    key: Key,
+    /// (id, "Theme > Topic").
+    topic: Option<(Uuid, String)>,
+    marks: Option<f64>,
+    body: String,
+    options: Vec<prompts::ExtractedOption>,
+    parts: Vec<prompts::ExtractedPart>,
+    group_ref: Option<String>,
+    diagram_ref: Option<String>,
+    refers_to_number: bool,
+}
+
+fn part_text(body: Option<&str>, closing: Option<&str>) -> String {
+    format!("{} {}", body.unwrap_or(""), closing.unwrap_or(""))
+        .trim()
+        .to_string()
+}
+
+/// The page's diagrams and groups once saved, keyed by the reader's refs.
+struct PageRefs<'a> {
+    page_id: Uuid,
+    page_number: Option<&'a str>,
+    diagrams: &'a HashMap<String, Uuid>,
+    /// (id, whether the group has a diagram).
+    groups: &'a HashMap<String, (Uuid, bool)>,
+}
+
+impl Draft {
+    fn text(&self) -> Text {
+        Text {
+            body: self.body.clone(),
+            options: self
+                .options
+                .iter()
+                .map(|o| (o.label.clone(), o.body.clone().unwrap_or_default()))
+                .collect(),
+            parts: self
+                .parts
+                .iter()
+                .map(|p| part_text(p.body.as_deref(), p.closing_text.as_deref()))
+                .collect(),
+        }
+    }
+
+    fn group(&self, r: &PageRefs) -> Option<(Uuid, bool)> {
+        self.group_ref
+            .as_deref()
+            .and_then(|g| r.groups.get(g))
+            .copied()
+    }
+
+    fn diagram_id(&self, r: &PageRefs) -> Option<Uuid> {
+        self.diagram_ref
+            .as_deref()
+            .and_then(|d| r.diagrams.get(d))
+            .copied()
+    }
+
+    fn has_diagram(&self, r: &PageRefs) -> bool {
+        self.diagram_ref.is_some()
+            || self.group(r).is_some_and(|(_, has)| has)
+            || self.options.iter().any(|o| o.diagram_ref.is_some())
+            || self.parts.iter().any(|p| p.diagram_ref.is_some())
+    }
+
+    /// How the answering models see it; diagrams are given by description.
+    fn for_answer<'a>(
+        &'a self,
+        instruction: Option<&'a str>,
+        diagram_text: &'a HashMap<String, String>,
+        group_diagram: Option<&'a str>,
+    ) -> QuestionForAnswer<'a> {
+        let describe = |r: Option<&str>| r.and_then(|r| diagram_text.get(r)).map(String::as_str);
+        QuestionForAnswer {
+            number: &self.number,
+            topic: self.topic.as_ref().map(|t| t.1.as_str()),
+            instruction,
+            body: &self.body,
+            diagram: describe(self.diagram_ref.as_deref()).or(describe(group_diagram)),
+            options: self
+                .options
+                .iter()
+                .map(|o| {
+                    let text = match (&o.body, describe(o.diagram_ref.as_deref())) {
+                        (Some(b), _) => b.clone(),
+                        (None, Some(d)) => format!("(picture: {d})"),
+                        (None, None) => String::new(),
+                    };
+                    (o.label.as_str(), text)
+                })
+                .collect(),
+        }
+    }
+}
+
+/// Two questions on one page with the same key (a book listing one question twice).
+fn same_key(a: &Draft, b: &Draft) -> bool {
+    let fits = |x: &Option<String>, y: &Option<String>| x.is_none() || y.is_none() || x == y;
+    a.kind == b.kind
+        && a.key.exam_id == b.key.exam_id
+        && a.key.year == b.key.year
+        && a.key.original_number == b.key.original_number
+        && fits(&a.key.sitting, &b.key.sitting)
+        && fits(&a.key.paper, &b.key.paper)
+}
+
+#[derive(PartialEq)]
+enum Plan {
+    Decided(Decision),
+    /// The same as an earlier question on this page.
+    SameAs(usize),
 }
 
 async fn page_loop(state: AppState) {
@@ -160,20 +377,59 @@ async fn process_page(state: &AppState, page: ClaimedPage) -> anyhow::Result<()>
 }
 
 async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result<()> {
-    let source = page_source(&state.db, page.id).await?;
+    let src = page_source(&state.db, page.id).await?;
+    let exams = load_exams(&state.db).await?;
+    let topics = load_topics(&state.db, src.subject_id).await?;
+    let topic_refs: HashMap<String, &(Uuid, String)> = topics
+        .iter()
+        .enumerate()
+        .map(|(i, t)| (format!("t{}", i + 1), t))
+        .collect();
+    // The heading and exam in force at the bottom of the previous page, if it's been read.
+    let previous: Option<(String, Option<serde_json::Value>)> = sqlx::query_as(
+        "select status, carried_context from pages where source_id = $1 and position < $2
+         order by position desc limit 1",
+    )
+    .bind(src.source_id)
+    .bind(src.position)
+    .fetch_optional(&state.db)
+    .await?;
+    let carried = previous
+        .filter(|(status, _)| status == "done")
+        .and_then(|(_, c)| c);
+
     let photo = state
         .storage
         .get(&page.photo_key)
         .await
         .context("loading photo")?;
     let photo_b64 = B64.encode(&photo);
+    let prompt = prompts::extract_prompt(&prompts::PageContext {
+        source_title: &src.title,
+        source_kind: &src.kind,
+        layout: &src.layout,
+        subject: &src.subject,
+        level: &src.level,
+        source_exam: describe_defaults(&src, &exams),
+        exam_codes: exams
+            .iter()
+            .filter(|e| e.3 == src.level)
+            .map(|e| format!("{} ({})", e.2, e.1))
+            .collect(),
+        carried: carried.as_ref(),
+        topics: topics
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (format!("t{}", i + 1), t.1.clone()))
+            .collect(),
+    });
 
     // 1. Claude reads the page.
     let read = state
         .claude
         .run(tutor_claude::Request {
             system: prompts::EXTRACT_SYSTEM,
-            prompt: prompts::EXTRACT_PROMPT,
+            prompt: &prompt,
             image: Some(tutor_claude::Image {
                 media_type: "image/jpeg",
                 base64: &photo_b64,
@@ -204,73 +460,152 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
             }
         }
     }
+    let carry_field = |k: &str| {
+        extraction
+            .carry
+            .as_ref()
+            .and_then(|c| c.get(k))
+            .and_then(|v| v.as_str())
+            .map(str::to_string)
+    };
+    let carry_year = extraction
+        .carry
+        .as_ref()
+        .and_then(|c| c.get("year"))
+        .and_then(|v| v.as_i64())
+        .map(|y| y as i32);
+    let (carry_exam, carry_paper, carry_sitting) = (
+        carry_field("exam"),
+        carry_field("paper"),
+        carry_field("sitting"),
+    );
+    if let Some(tail) = &mut extraction.tail_fragment {
+        tail.topic_id = tail
+            .topic_ref
+            .as_deref()
+            .and_then(|r| topic_refs.get(r))
+            .map(|t| t.0);
+        tail.exam = carry_exam;
+        tail.paper = carry_paper;
+        tail.sitting = carry_sitting;
+        tail.year = tail.year.or(carry_year);
+    }
 
-    // 2. Both models answer every question.
-    let diagram_text: HashMap<&str, &str> = extraction
+    let drafts: Vec<Draft> = extraction
+        .questions
+        .iter()
+        .map(|q| {
+            let theory = q.kind == "theory";
+            Draft {
+                kind: if theory { "theory" } else { "objective" }.into(),
+                number: q.number.clone(),
+                key: resolve_key(
+                    &src,
+                    &exams,
+                    Printed {
+                        exam: q.exam.as_deref(),
+                        year: q.year,
+                        paper: q.paper.as_deref(),
+                        sitting: q.sitting.as_deref(),
+                        original_number: q.original_number.as_deref(),
+                    },
+                    &q.number,
+                ),
+                topic: q
+                    .topic_ref
+                    .as_deref()
+                    .and_then(|r| topic_refs.get(r))
+                    .map(|t| (*t).clone()),
+                marks: q.marks,
+                body: q.body.clone(),
+                options: if theory {
+                    Vec::new()
+                } else {
+                    q.options.clone()
+                },
+                parts: if theory { q.parts.clone() } else { Vec::new() },
+                group_ref: q.group_ref.clone(),
+                diagram_ref: q.diagram_ref.clone(),
+                refers_to_number: q.refers_to_number,
+            }
+        })
+        .collect();
+
+    // 2. Is each one already in the bank?
+    let page_number = extraction.page_number.as_deref();
+    let mut plans: Vec<Plan> = Vec::with_capacity(drafts.len());
+    for (i, d) in drafts.iter().enumerate() {
+        let mut plan = Plan::Decided(decide_question(&state.db, &src, page_number, d).await?);
+        let fresh = Plan::Decided(Decision::New {
+            possible_duplicate: false,
+        });
+        if plan == fresh && d.key.matchable() {
+            let earlier = (0..i).find(|&j| {
+                matches!(plans[j], Plan::Decided(Decision::New { .. })) && same_key(&drafts[j], d)
+            });
+            if let Some(j) = earlier {
+                plan = if drafts[j].text().agrees_with(&d.text()) {
+                    Plan::SameAs(j)
+                } else {
+                    Plan::Decided(Decision::New {
+                        possible_duplicate: true,
+                    })
+                };
+            }
+        }
+        plans.push(plan);
+    }
+
+    // 3. Both models answer the new objective questions.
+    let diagram_text: HashMap<String, String> = extraction
         .diagrams
         .iter()
-        .map(|d| (d.key.as_str(), d.description.as_str()))
+        .map(|d| (d.key.clone(), d.description.clone()))
         .collect();
     let groups: HashMap<&str, &prompts::ExtractedGroup> = extraction
         .groups
         .iter()
         .map(|g| (g.key.as_str(), g))
         .collect();
-    let for_answer: Vec<QuestionForAnswer> = extraction
-        .questions
-        .iter()
-        .map(|q| {
-            let group = q.group_ref.as_deref().and_then(|r| groups.get(r));
-            let diagram = q
-                .diagram_ref
-                .as_deref()
-                .or(group.and_then(|g| g.diagram_ref.as_deref()))
-                .and_then(|r| diagram_text.get(r).copied());
-            QuestionForAnswer {
-                number: &q.number,
-                topic: q.topic.as_deref(),
-                instruction: group.and_then(|g| g.instruction.as_deref()),
-                body: &q.body,
-                diagram,
-                options: q
-                    .options
-                    .iter()
-                    .map(|o| {
-                        let text = match (
-                            &o.body,
-                            o.diagram_ref.as_deref().and_then(|r| diagram_text.get(r)),
-                        ) {
-                            (Some(b), _) => b.clone(),
-                            (None, Some(d)) => format!("(picture: {d})"),
-                            (None, None) => String::new(),
-                        };
-                        (o.label.as_str(), text)
-                    })
-                    .collect(),
-            }
+    let to_answer: Vec<usize> = (0..drafts.len())
+        .filter(|&i| {
+            drafts[i].kind == "objective" && matches!(plans[i], Plan::Decided(Decision::New { .. }))
         })
         .collect();
-    let (sol, luna) = if for_answer.is_empty() {
-        (Vec::new(), Vec::new())
-    } else {
-        answer_both(state, Some(page.id), &for_answer).await?
-    };
-
-    let unmatched: Vec<&str> = extraction
-        .questions
+    let for_answer: Vec<QuestionForAnswer> = to_answer
         .iter()
-        .enumerate()
-        .filter(|(i, _)| sol[*i].is_none() || luna[*i].is_none())
-        .map(|(_, q)| q.number.as_str())
+        .map(|&i| {
+            let d = &drafts[i];
+            let group = d.group_ref.as_deref().and_then(|r| groups.get(r));
+            d.for_answer(
+                group.and_then(|g| g.instruction.as_deref()),
+                &diagram_text,
+                group.and_then(|g| g.diagram_ref.as_deref()),
+            )
+        })
         .collect();
-    if !unmatched.is_empty() {
-        tracing::warn!(page = %page.id, ?unmatched, "answers missing for some questions");
+    let mut sol: Vec<Option<Answer>> = vec![None; drafts.len()];
+    let mut luna: Vec<Option<Answer>> = vec![None; drafts.len()];
+    if !for_answer.is_empty() {
+        let (s, l) = answer_both(state, Some(page.id), &for_answer).await?;
+        for ((&i, s), l) in to_answer.iter().zip(s).zip(l) {
+            sol[i] = s;
+            luna[i] = l;
+        }
+    }
+    let unanswered: Vec<&str> = to_answer
+        .iter()
+        .filter(|&&i| sol[i].is_none() || luna[i].is_none())
+        .map(|&i| drafts[i].number.as_str())
+        .collect();
+    if !unanswered.is_empty() {
+        tracing::warn!(page = %page.id, ?unanswered, "answers missing for some questions");
     }
 
-    // 3. Save everything in one transaction.
+    // 4. Save everything in one transaction.
     let mut tx = state.db.begin().await?;
     sqlx::query(
-        "update pages set page_number = $2, head_fragment = $3, tail_fragment = $4,
+        "update pages set page_number = $2, head_fragment = $3, tail_fragment = $4, carried_context = $5,
            status = 'done', processed_at = now(), error = null, next_attempt_at = null
          where id = $1",
     )
@@ -278,6 +613,7 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
     .bind(&extraction.page_number)
     .bind(&extraction.head_fragment)
     .bind(extraction.tail_fragment.as_ref().map(|t| json!(t)))
+    .bind(&extraction.carry)
     .execute(&mut *tx)
     .await?;
 
@@ -290,7 +626,7 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
         .bind(&d.description)
         .fetch_one(&mut *tx)
         .await?;
-        diagram_ids.insert(d.key.as_str(), id);
+        diagram_ids.insert(d.key.clone(), id);
     }
     let mut group_ids = HashMap::new();
     for g in &extraction.groups {
@@ -304,52 +640,39 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
         .bind(g.diagram_ref.as_deref().and_then(|r| diagram_ids.get(r)))
         .fetch_one(&mut *tx)
         .await?;
-        group_ids.insert(g.key.as_str(), (id, g.diagram_ref.is_some()));
+        group_ids.insert(g.key.clone(), (id, g.diagram_ref.is_some()));
     }
 
-    for (i, q) in extraction.questions.iter().enumerate() {
-        let group = q.group_ref.as_deref().and_then(|r| group_ids.get(r));
-        let has_diagram = q.diagram_ref.is_some()
-            || group.is_some_and(|(_, has)| *has)
-            || q.options.iter().any(|o| o.diagram_ref.is_some());
-        let options: Vec<NewOption> = q
-            .options
-            .iter()
-            .map(|o| NewOption {
-                label: o.label.clone(),
-                body: o.body.clone(),
-                diagram_id: o
-                    .diagram_ref
-                    .as_deref()
-                    .and_then(|r| diagram_ids.get(r))
-                    .copied(),
-            })
-            .collect();
-        insert_question(
-            &mut tx,
-            NewQuestion {
-                source: &source,
-                page_id: page.id,
-                page_number: extraction.page_number.as_deref(),
-                group_id: group.map(|(id, _)| *id),
-                diagram_id: q
-                    .diagram_ref
-                    .as_deref()
-                    .and_then(|r| diagram_ids.get(r))
-                    .copied(),
-                number: &q.number,
-                body: &q.body,
-                options,
-                has_diagram,
-                refers_to_number: q.refers_to_number,
-                sol: sol[i].as_ref(),
-                luna: luna[i].as_ref(),
-            },
-        )
-        .await?;
+    let refs = PageRefs {
+        page_id: page.id,
+        page_number,
+        diagrams: &diagram_ids,
+        groups: &group_ids,
+    };
+    let mut saved: Vec<Option<Uuid>> = vec![None; drafts.len()];
+    for (i, d) in drafts.iter().enumerate() {
+        saved[i] = match &plans[i] {
+            Plan::Decided(decision) => {
+                save_draft(
+                    &mut tx,
+                    &src,
+                    &refs,
+                    d,
+                    decision,
+                    sol[i].as_ref(),
+                    luna[i].as_ref(),
+                )
+                .await?
+            }
+            Plan::SameAs(j) => {
+                let Some(id) = saved[*j] else { continue };
+                add_appearance(&mut tx, id, &src, &refs, &d.number).await?;
+                Some(id)
+            }
+        };
     }
-    // Questions skipped as duplicates (a re-uploaded page) leave groups and diagrams
-    // nobody uses; drop them so the diagrams aren't drawn and paid for.
+    // Questions that were already saved leave groups and diagrams nobody uses;
+    // drop them so the diagrams aren't drawn and paid for.
     sqlx::query(
         "delete from question_groups g where g.page_id = $1
            and not exists (select 1 from questions q where q.group_id = g.id)",
@@ -361,7 +684,8 @@ async fn read_and_answer(state: &AppState, page: &ClaimedPage) -> anyhow::Result
         "delete from diagrams d where d.page_id = $1
            and not exists (select 1 from questions q where q.diagram_id = d.id)
            and not exists (select 1 from options o where o.diagram_id = d.id)
-           and not exists (select 1 from question_groups g where g.diagram_id = d.id)",
+           and not exists (select 1 from question_groups g where g.diagram_id = d.id)
+           and not exists (select 1 from question_parts p where p.diagram_id = d.id)",
     )
     .bind(page.id)
     .execute(&mut *tx)
@@ -424,113 +748,309 @@ async fn answer_both(
     Ok((sol?, luna?))
 }
 
-struct NewOption {
-    label: String,
-    body: Option<String>,
-    diagram_id: Option<Uuid>,
-}
-
-struct NewQuestion<'a> {
-    source: &'a PageSource,
-    page_id: Uuid,
-    page_number: Option<&'a str>,
-    group_id: Option<Uuid>,
-    diagram_id: Option<Uuid>,
-    number: &'a str,
-    body: &'a str,
-    options: Vec<NewOption>,
-    has_diagram: bool,
-    refers_to_number: bool,
-    sol: Option<&'a Answer>,
-    luna: Option<&'a Answer>,
-}
-
-/// Inserts an objective question with its options, flags and first appearance.
-/// Returns false when the source already has this page + number (a re-uploaded page).
-async fn insert_question(
-    tx: &mut Transaction<'_, Postgres>,
-    q: NewQuestion<'_>,
-) -> anyhow::Result<bool> {
-    let src = q.source;
-    if let Some(page_number) = q.page_number {
+/// Looks a question up by when it was set; see `matcher` for the rules.
+async fn decide_question(
+    db: &PgPool,
+    src: &PageSource,
+    page_number: Option<&str>,
+    d: &Draft,
+) -> anyhow::Result<Decision> {
+    if let Some(page_number) = page_number {
         let seen: bool = sqlx::query_scalar(
             "select exists(select 1 from question_appearances
                where source_id = $1 and page_number = $2 and number = $3)",
         )
         .bind(src.source_id)
         .bind(page_number)
-        .bind(q.number)
-        .fetch_one(&mut **tx)
+        .bind(&d.number)
+        .fetch_one(db)
         .await?;
         if seen {
-            tracing::info!(
-                number = q.number,
-                page_number,
-                "question already saved; skipped"
-            );
-            return Ok(false);
+            return Ok(Decision::AlreadyOnPage);
         }
     }
-    let labels: Vec<&str> = q.options.iter().map(|o| o.label.as_str()).collect();
-    let mut verdict = judge(&labels, q.sol, q.luna, q.has_diagram);
-    if q.refers_to_number {
+    if !d.key.matchable() {
+        return Ok(Decision::New {
+            possible_duplicate: false,
+        });
+    }
+    let rows: Vec<(Uuid, Option<String>, String)> = sqlx::query_as(
+        "select id, sitting, body from questions
+         where origin = 'source' and subject_id = $1 and exam_id = $2 and year = $3
+           and original_number = $4 and kind = $5
+           and ($6::text is null or sitting is null or sitting = $6)
+           and ($7::text is null or paper is null or paper = $7)",
+    )
+    .bind(src.subject_id)
+    .bind(d.key.exam_id)
+    .bind(d.key.year)
+    .bind(&d.key.original_number)
+    .bind(&d.kind)
+    .bind(&d.key.sitting)
+    .bind(&d.key.paper)
+    .fetch_all(db)
+    .await?;
+    let mut candidates = Vec::with_capacity(rows.len());
+    for (id, sitting, body) in rows {
+        let options: Vec<(String, String)> = sqlx::query_as(
+            "select label, coalesce(body, '') from options where question_id = $1 order by label",
+        )
+        .bind(id)
+        .fetch_all(db)
+        .await?;
+        let parts: Vec<(Option<String>, Option<String>)> = sqlx::query_as(
+            "select body, closing_text from question_parts where question_id = $1 order by position",
+        )
+        .bind(id)
+        .fetch_all(db)
+        .await?;
+        candidates.push(Candidate {
+            id,
+            sitting,
+            text: Text {
+                body,
+                options,
+                parts: parts
+                    .iter()
+                    .map(|(b, c)| part_text(b.as_deref(), c.as_deref()))
+                    .collect(),
+            },
+        });
+    }
+    Ok(matcher::decide(&d.key, &d.text(), &candidates))
+}
+
+/// Saves a question as decided. Returns the question it now lives in, if any.
+async fn save_draft(
+    tx: &mut Transaction<'_, Postgres>,
+    src: &PageSource,
+    r: &PageRefs<'_>,
+    d: &Draft,
+    decision: &Decision,
+    sol: Option<&Answer>,
+    luna: Option<&Answer>,
+) -> anyhow::Result<Option<Uuid>> {
+    match decision {
+        Decision::AlreadyOnPage => {
+            tracing::info!(
+                number = d.number,
+                page_number = r.page_number,
+                "page read before; question skipped"
+            );
+            Ok(None)
+        }
+        Decision::Existing { id, conflict } => {
+            add_appearance(tx, *id, src, r, &d.number).await?;
+            if *conflict {
+                // Keep the saved copy as it is; a reviewer compares the two.
+                flag(tx, *id, "source_conflict").await?;
+            } else {
+                // Fill only what the saved copy lacks.
+                sqlx::query(
+                    "update questions set sitting = coalesce(sitting, $2), paper = coalesce(paper, $3),
+                       topic_id = coalesce(topic_id, $4), diagram_id = coalesce(diagram_id, $5),
+                       group_id = coalesce(group_id, $6), marks = coalesce(marks, $7::numeric)
+                     where id = $1",
+                )
+                .bind(id)
+                .bind(&d.key.sitting)
+                .bind(&d.key.paper)
+                .bind(d.topic.as_ref().map(|t| t.0))
+                .bind(d.diagram_id(r))
+                .bind(d.group(r).map(|g| g.0))
+                .bind(d.marks)
+                .execute(&mut **tx)
+                .await?;
+            }
+            tracing::info!(number = d.number, %id, conflict, "question already in the bank; added this appearance");
+            Ok(Some(*id))
+        }
+        Decision::New { possible_duplicate } => Ok(Some(
+            insert_new(tx, src, r, d, *possible_duplicate, sol, luna).await?,
+        )),
+    }
+}
+
+async fn add_appearance(
+    tx: &mut Transaction<'_, Postgres>,
+    question_id: Uuid,
+    src: &PageSource,
+    r: &PageRefs<'_>,
+    number: &str,
+) -> sqlx::Result<()> {
+    sqlx::query(
+        "insert into question_appearances (question_id, source_id, page_id, page_number, number)
+         values ($1, $2, $3, $4, $5) on conflict do nothing",
+    )
+    .bind(question_id)
+    .bind(src.source_id)
+    .bind(r.page_id)
+    .bind(r.page_number)
+    .bind(number)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+/// Puts a question (back) in the review queue for `reason`.
+async fn flag(tx: &mut Transaction<'_, Postgres>, id: Uuid, reason: &str) -> sqlx::Result<()> {
+    sqlx::query(
+        "update questions set needs_check = true, resolved_at = null,
+           check_reasons = case when $2::text = any(check_reasons) then check_reasons
+                                else array_append(check_reasons, $2::text) end
+         where id = $1",
+    )
+    .bind(id)
+    .bind(reason)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+/// Inserts a new question with its options or parts, flags and first appearance.
+async fn insert_new(
+    tx: &mut Transaction<'_, Postgres>,
+    src: &PageSource,
+    r: &PageRefs<'_>,
+    d: &Draft,
+    possible_duplicate: bool,
+    sol: Option<&Answer>,
+    luna: Option<&Answer>,
+) -> anyhow::Result<Uuid> {
+    let objective = d.kind == "objective";
+    let has_diagram = d.has_diagram(r);
+    let labels: Vec<&str> = d.options.iter().map(|o| o.label.as_str()).collect();
+    let mut verdict = if objective {
+        judge(&labels, sol, luna, has_diagram)
+    } else {
+        // Theory isn't answered yet; only what a reviewer must look at.
+        Verdict {
+            correct: None,
+            reasons: if has_diagram {
+                vec!["has_diagram"]
+            } else {
+                Vec::new()
+            },
+        }
+    };
+    if d.refers_to_number {
         verdict.reasons.push("refers_to_number");
+    }
+    if possible_duplicate {
+        verdict.reasons.push("possible_duplicate");
     }
 
     let id: Uuid = sqlx::query_scalar(
         "insert into questions (kind, origin, subject_id, source_id, page_id, page_number, group_id, diagram_id,
            number, body, explanation, confidence, second_answer, second_explanation, needs_check, check_reasons,
-           exam_id, year, paper, sitting)
-         values ('objective', 'source', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-           $15, $16, $17, $18)
+           exam_id, year, paper, sitting, original_number, topic_id, marks)
+         values ($1, 'source', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+           $16, $17, $18, $19, $20, $21, $22::numeric)
          returning id",
     )
+    .bind(&d.kind)
     .bind(src.subject_id)
     .bind(src.source_id)
-    .bind(q.page_id)
-    .bind(q.page_number)
-    .bind(q.group_id)
-    .bind(q.diagram_id)
-    .bind(q.number)
-    .bind(q.body)
-    .bind(q.sol.map(|a| a.explanation.as_str()))
-    .bind(q.sol.map(|a| a.confidence.as_str()).filter(|c| ["high", "medium", "low"].contains(c)))
-    .bind(q.luna.map(|a| a.answer.as_str()))
-    .bind(q.luna.map(|a| a.explanation.as_str()))
+    .bind(r.page_id)
+    .bind(r.page_number)
+    .bind(d.group(r).map(|g| g.0))
+    .bind(d.diagram_id(r))
+    .bind(&d.number)
+    .bind(&d.body)
+    .bind(sol.map(|a| a.explanation.as_str()))
+    .bind(sol.map(|a| a.confidence.as_str()).filter(|c| ["high", "medium", "low"].contains(c)))
+    .bind(luna.map(|a| a.answer.as_str()))
+    .bind(luna.map(|a| a.explanation.as_str()))
     .bind(!verdict.reasons.is_empty())
     .bind(&verdict.reasons)
-    .bind(src.exam_id)
-    .bind(src.year)
-    .bind(&src.paper)
-    .bind(&src.sitting)
+    .bind(d.key.exam_id)
+    .bind(d.key.year)
+    .bind(&d.key.paper)
+    .bind(&d.key.sitting)
+    .bind(&d.key.original_number)
+    .bind(d.topic.as_ref().map(|t| t.0))
+    .bind(d.marks)
     .fetch_one(&mut **tx)
     .await?;
-    sqlx::query(
-        "insert into question_appearances (question_id, source_id, page_id, page_number, number)
-         values ($1, $2, $3, $4, $5)",
-    )
-    .bind(id)
-    .bind(src.source_id)
-    .bind(q.page_id)
-    .bind(q.page_number)
-    .bind(q.number)
-    .execute(&mut **tx)
-    .await?;
+    add_appearance(tx, id, src, r, &d.number).await?;
 
-    for o in &q.options {
+    for o in &d.options {
+        let diagram_id = o
+            .diagram_ref
+            .as_deref()
+            .and_then(|x| r.diagrams.get(x))
+            .copied();
         sqlx::query(
             "insert into options (question_id, label, body, diagram_id, is_correct) values ($1, $2, $3, $4, $5)
              on conflict (question_id, label) do nothing",
         )
         .bind(id)
         .bind(&o.label)
-        .bind(o.body.as_deref().filter(|b| !b.is_empty()).or(if o.diagram_id.is_none() { Some("") } else { None }))
-        .bind(o.diagram_id)
+        .bind(o.body.as_deref().filter(|b| !b.is_empty()).or(if diagram_id.is_none() { Some("") } else { None }))
+        .bind(diagram_id)
         .bind(verdict.correct.as_deref() == Some(o.label.as_str()))
         .execute(&mut **tx)
         .await?;
     }
-    Ok(true)
+    insert_parts(tx, id, &d.parts, r.diagrams).await?;
+    Ok(id)
+}
+
+/// "(a)/(ii)", "a/ii", "A / II." → "a/ii".
+fn norm_path(path: &str) -> String {
+    path.split('/')
+        .map(|s| s.trim().trim_matches(['(', ')', '.', ' ']).to_lowercase())
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+/// Saves a theory question's parts as a tree; `position` is the printed order.
+async fn insert_parts(
+    tx: &mut Transaction<'_, Postgres>,
+    question_id: Uuid,
+    parts: &[prompts::ExtractedPart],
+    diagrams: &HashMap<String, Uuid>,
+) -> sqlx::Result<()> {
+    let mut ids: HashMap<String, Uuid> = HashMap::new();
+    for (i, p) in parts.iter().enumerate() {
+        let mut path = norm_path(&p.path);
+        if path.is_empty() {
+            path = (i + 1).to_string();
+        }
+        let (parent_path, label) = match path.rsplit_once('/') {
+            Some((parent, label)) => (Some(parent), label),
+            None => (None, path.as_str()),
+        };
+        // If the reader skipped a parent, hang the part on the nearest one it gave.
+        let parent = parent_path.and_then(|mut pp| {
+            loop {
+                if let Some(id) = ids.get(pp) {
+                    break Some(*id);
+                }
+                match pp.rsplit_once('/') {
+                    Some((up, _)) => pp = up,
+                    None => break None,
+                }
+            }
+        });
+        let id: Uuid = sqlx::query_scalar(
+            "insert into question_parts (question_id, parent_id, label, position, body, closing_text, marks, diagram_id)
+             values ($1, $2, $3, $4, $5, $6, $7::numeric, $8) returning id",
+        )
+        .bind(question_id)
+        .bind(parent)
+        .bind(label)
+        .bind(i as i32 + 1)
+        .bind(&p.body)
+        .bind(&p.closing_text)
+        .bind(p.marks)
+        .bind(p.diagram_ref.as_deref().and_then(|d| diagrams.get(d)))
+        .fetch_one(&mut **tx)
+        .await?;
+        ids.insert(path.clone(), id);
+    }
+    Ok(())
 }
 
 pub struct Verdict {
@@ -663,13 +1183,17 @@ async fn join_split_questions(state: &AppState, page_id: Uuid) -> anyhow::Result
     .bind(page_id)
     .fetch_all(&state.db)
     .await?;
+    if pairs.is_empty() {
+        return Ok(());
+    }
 
     let openai = state.openai.as_ref().context("OPENAI_API_KEY is not set")?;
+    let exams = load_exams(&state.db).await?;
     for pair in pairs {
         let tail = &pair.tail.0;
         let input = format!(
-            "Bottom of the first page:\n{}\n\nTop of the next page:\n{}",
-            tail.text, pair.head
+            "Kind: {}\n\nBottom of the first page:\n{}\n\nTop of the next page:\n{}",
+            tail.kind, tail.text, pair.head
         );
         let res = openai
             .respond(tutor_openai::Request {
@@ -697,46 +1221,92 @@ async fn join_split_questions(state: &AppState, page_id: Uuid) -> anyhow::Result
         )
         .await;
         let joined: prompts::Joined = serde_json::from_value(res.output)?;
-        let question = QuestionForAnswer {
-            number: &tail.number,
-            topic: tail.topic.as_deref(),
-            instruction: None,
-            body: &joined.body,
-            diagram: None,
-            options: joined
-                .options
-                .iter()
-                .map(|o| (o.label.as_str(), o.body.clone()))
-                .collect(),
-        };
-        let (sol, luna) = answer_both(state, Some(pair.first_id), &[question]).await?;
 
-        let source = page_source(&state.db, pair.first_id).await?;
-        let mut tx = state.db.begin().await?;
-        insert_question(
-            &mut tx,
-            NewQuestion {
-                source: &source,
-                page_id: pair.first_id,
-                page_number: Some(&pair.first_number),
-                group_id: None,
-                diagram_id: None,
-                number: &tail.number,
-                body: &joined.body,
-                options: joined
+        let src = page_source(&state.db, pair.first_id).await?;
+        let topic = match tail.topic_id {
+            Some(id) => {
+                sqlx::query_scalar::<_, String>("select name from syllabus_topics where id = $1")
+                    .bind(id)
+                    .fetch_optional(&state.db)
+                    .await?
+                    .map(|name| (id, name))
+            }
+            None => None,
+        };
+        let theory = tail.kind == "theory";
+        let draft = Draft {
+            kind: if theory { "theory" } else { "objective" }.into(),
+            number: tail.number.clone(),
+            key: resolve_key(
+                &src,
+                &exams,
+                Printed {
+                    exam: tail.exam.as_deref(),
+                    year: tail.year.or(joined.year),
+                    paper: tail.paper.as_deref(),
+                    sitting: tail.sitting.as_deref(),
+                    original_number: tail
+                        .original_number
+                        .as_deref()
+                        .or(joined.original_number.as_deref()),
+                },
+                &tail.number,
+            ),
+            topic,
+            marks: joined.marks,
+            body: joined.body.clone(),
+            options: if theory {
+                Vec::new()
+            } else {
+                joined
                     .options
                     .iter()
-                    .map(|o| NewOption {
+                    .map(|o| prompts::ExtractedOption {
                         label: o.label.clone(),
                         body: Some(o.body.clone()),
-                        diagram_id: None,
+                        diagram_ref: None,
                     })
-                    .collect(),
-                has_diagram: false,
-                refers_to_number: false,
-                sol: sol[0].as_ref(),
-                luna: luna[0].as_ref(),
+                    .collect()
             },
+            parts: if theory {
+                joined.parts.clone()
+            } else {
+                Vec::new()
+            },
+            group_ref: None,
+            diagram_ref: None,
+            refers_to_number: false,
+        };
+        let decision = decide_question(&state.db, &src, Some(&pair.first_number), &draft).await?;
+        let (sol, luna) = if !theory && matches!(decision, Decision::New { .. }) {
+            let no_diagrams = HashMap::new();
+            let (mut s, mut l) = answer_both(
+                state,
+                Some(pair.first_id),
+                &[draft.for_answer(None, &no_diagrams, None)],
+            )
+            .await?;
+            (s.remove(0), l.remove(0))
+        } else {
+            (None, None)
+        };
+
+        let (no_diagrams, no_groups) = (HashMap::new(), HashMap::new());
+        let refs = PageRefs {
+            page_id: pair.first_id,
+            page_number: Some(&pair.first_number),
+            diagrams: &no_diagrams,
+            groups: &no_groups,
+        };
+        let mut tx = state.db.begin().await?;
+        save_draft(
+            &mut tx,
+            &src,
+            &refs,
+            &draft,
+            &decision,
+            sol.as_ref(),
+            luna.as_ref(),
         )
         .await?;
         sqlx::query("update pages set tail_joined = true where id = $1")
@@ -1003,19 +1573,93 @@ mod tests {
 
     #[test]
     fn repeated_numbers_get_a_suffix() {
-        let q = |n: &str| prompts::ExtractedQuestion {
-            number: n.into(),
-            topic: None,
-            body: String::new(),
-            group_ref: None,
-            diagram_ref: None,
-            refers_to_number: false,
-            options: vec![],
+        let q = |n: &str| -> prompts::ExtractedQuestion {
+            serde_json::from_value(json!({ "number": n, "body": "", "options": [] })).unwrap()
         };
         let mut qs = vec![q("4"), q("5"), q("4."), q("4")];
         disambiguate_numbers(&mut qs);
         let numbers: Vec<_> = qs.iter().map(|q| q.number.as_str()).collect();
         assert_eq!(numbers, ["4", "5", "4 (2nd)", "4 (3rd)"]);
+    }
+
+    fn source(layout: &str, exam_id: Option<Uuid>) -> PageSource {
+        PageSource {
+            source_id: Uuid::nil(),
+            title: "Prep50 Biology".into(),
+            kind: "book".into(),
+            layout: layout.into(),
+            subject_id: Uuid::nil(),
+            subject: "Biology".into(),
+            level: "sss".into(),
+            exam_id,
+            year: None,
+            paper: None,
+            sitting: None,
+            position: 1,
+        }
+    }
+
+    fn printed<'a>(
+        exam: Option<&'a str>,
+        year: Option<i32>,
+        number: Option<&'a str>,
+    ) -> Printed<'a> {
+        Printed {
+            exam,
+            year,
+            paper: None,
+            sitting: None,
+            original_number: number,
+        }
+    }
+
+    #[test]
+    fn keys_from_tags_and_source_defaults() {
+        let waec = Uuid::from_u128(1);
+        let neco = Uuid::from_u128(2);
+        let exams: Vec<ExamRow> = vec![
+            (waec, "WAEC".into(), "WASSCE".into(), "sss".into()),
+            (neco, "NECO".into(), "SSCE".into(), "sss".into()),
+        ];
+        // Prep50: the tag gives year and number, the source says WAEC.
+        let k = resolve_key(
+            &source("by_topic", Some(waec)),
+            &exams,
+            printed(None, Some(2012), Some("1")),
+            "1",
+        );
+        assert_eq!(
+            (k.exam_id, k.year, k.original_number.as_deref()),
+            (Some(waec), Some(2012), Some("1"))
+        );
+        assert!(k.matchable());
+        // No tag in a topic book: the book's own numbering means nothing.
+        let k = resolve_key(
+            &source("by_topic", Some(waec)),
+            &exams,
+            printed(None, None, None),
+            "14",
+        );
+        assert_eq!(k.original_number, None);
+        assert!(!k.matchable());
+        // A printed exam beats the source's.
+        let k = resolve_key(
+            &source("by_year", Some(waec)),
+            &exams,
+            printed(Some("NECO SSCE"), Some(2019), None),
+            "7.",
+        );
+        assert_eq!(
+            (k.exam_id, k.original_number.as_deref()),
+            (Some(neco), Some("7"))
+        );
+    }
+
+    #[test]
+    fn part_paths() {
+        assert_eq!(norm_path("(a)/(ii)"), "a/ii");
+        assert_eq!(norm_path("A / II."), "a/ii");
+        assert_eq!(norm_path("d"), "d");
     }
 
     #[test]

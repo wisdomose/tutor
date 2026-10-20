@@ -148,6 +148,9 @@ text in WAEC 2015 and WAEC 2017 is two questions.
   - One candidate whose text agrees → merge as above.
   - The text differs, or there are several candidates → save as new and flag
     `possible_duplicate` for a reviewer to merge or keep.
+- **Comparing text** (`apps/api/src/matcher.rs`): wording is compared after
+  dropping case, punctuation, spacing and LaTeX commands; options must match under
+  the same letters. With several candidates, the one that reads the same wins.
 - **JAMB UTME**: year + number matches only for the fixed-paper years before
   computer-based testing started in 2013. After that, each book's
   JAMB questions are saved as their own questions and never matched.
@@ -167,10 +170,10 @@ text in WAEC 2015 and WAEC 2017 is two questions.
 - Upload page: choose or create a source; accept photos and PDFs. (Done:
   the browser renders each PDF page to a 2400px JPEG and sends it with the
   stored PDF's `upload_id`, so the reader sees PDFs and photos the same way.)
-- Claude prompt:
-  - Extract theory questions, with their part trees.
-  - Read tags as year/question number.
-  - Match each question to a syllabus topic.
-  - Ignore watermarks, worked examples and the facing page.
-- Worker: match each extracted question against the bank before saving.
+- Claude prompt (done): theory questions with their part trees; tags read as
+  year/number; page headers and the previous page's carried context give
+  exam/year/paper/sitting; a syllabus topic for every question; watermarks,
+  worked examples, instruction pages and the facing page ignored.
+- Worker (done): each question is matched against the bank before answering, so
+  a question already saved is not answered again.
 - A question editor for our own questions.
