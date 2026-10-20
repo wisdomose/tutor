@@ -3,6 +3,7 @@ import { createFileRoute, Link, useBlocker } from "@tanstack/react-router";
 import {
 	BookOpen,
 	Camera,
+	Check,
 	FileText,
 	Images,
 	PenLine,
@@ -495,14 +496,9 @@ function UploadPage() {
 			</DropZone>
 
 			{done !== null && (
-				<Card fill="lime">
-					<div className="font-display text-xl font-extrabold">
-						{done} page{done === 1 ? "" : "s"} uploaded
-					</div>
-					<div className="text-sm font-bold">
-						They're in the queue. Flagged questions will appear in Review.
-					</div>
-				</Card>
+				<Toast key={done} onGone={() => setDone(null)}>
+					{done} page{done === 1 ? "" : "s"} uploaded
+				</Toast>
 			)}
 
 			<QueuePanel />
@@ -629,5 +625,30 @@ function DropZone({
 				</div>
 			)}
 		</div>
+	);
+}
+
+/** A short note at the bottom of the screen that goes away by itself. */
+function Toast({
+	children,
+	onGone,
+}: {
+	children: ReactNode;
+	onGone: () => void;
+}) {
+	// The page re-renders while it polls; keep the first timer rather than restarting it.
+	const gone = useRef(onGone);
+	gone.current = onGone;
+	useEffect(() => {
+		const t = setTimeout(() => gone.current(), 3000);
+		return () => clearTimeout(t);
+	}, []);
+	return (
+		<output className="toast fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full border-[2.5px] border-ink bg-ink py-2.5 pr-5 pl-3 font-display text-base font-extrabold whitespace-nowrap text-lime">
+			<span className="flex size-6 items-center justify-center rounded-full bg-lime text-ink">
+				<Check aria-hidden="true" className="size-4" strokeWidth={3.5} />
+			</span>
+			{children}
+		</output>
 	);
 }

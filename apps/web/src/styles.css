@@ -76,3 +76,14 @@ textarea.field {
   line-height: 1.35;
   resize: vertical;
 }
+
+/* Toasts slide up into place. */
+.toast {
+  animation: toast-in 0.18s ease-out;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    translate: var(--tw-translate-x, 0) 12px;
+  }
+}
