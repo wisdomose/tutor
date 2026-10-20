@@ -24,13 +24,13 @@ export function MathText({
 						/\\[dt]?frac/.test(tex) ? `\\displaystyle ${tex}` : tex,
 						{ throwOnError: false },
 					);
-					// biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX output from its own renderer
-					// biome-ignore lint/suspicious/noArrayIndexKey: static split of one string
+					// An equation can't wrap; a long one scrolls instead of widening the page.
 					return (
 						<span
+							// biome-ignore lint/suspicious/noArrayIndexKey: static split of one string
 							key={i}
-							// An equation can't wrap; a long one scrolls instead of widening the page.
 							className="inline-block max-w-full overflow-x-auto overflow-y-hidden align-middle"
+							// biome-ignore lint/security/noDangerouslySetInnerHtml: KaTeX output from its own renderer
 							dangerouslySetInnerHTML={{ __html: html }}
 						/>
 					);
