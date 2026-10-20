@@ -372,13 +372,15 @@ pub struct PdfUpload {
     upload_id: Uuid,
 }
 
-/// Stores a PDF of one source as uploaded. Its pages are rendered by the browser and sent
-/// to `POST /pages` with this upload's id. Fields: `source_id`, `pdf`.
+/// Registers a PDF of one source. Its pages are rendered by the browser and sent to
+/// `POST /pages` with this upload's id. Fields: `source_id`, then `pdf` (the file, kept
+/// as uploaded) or just `name` for a PDF too large to send in one request.
 #[utoipa::path(post, path = "/uploads/pdf", request_body(content_type = "multipart/form-data"),
     responses((status = 200, body = PdfUpload), (status = 400, body = ErrorBody)))]
 async fn upload_pdf(State(s): State<AppState>, mut form: Multipart) -> ApiResult<PdfUpload> {
     let mut source_id: Option<Uuid> = None;
     let mut pdf = None;
+    let mut name_only: Option<String> = None;
     while let Some(field) = form
         .next_field()
         .await
@@ -397,15 +399,27 @@ async fn upload_pdf(State(s): State<AppState>, mut form: Multipart) -> ApiResult
                 }
                 pdf = Some((name, bytes));
             }
+            Some("name") => {
+                name_only = Some(field.text().await.map_err(|e| bad_request(e.to_string()))?);
+            }
             _ => {}
         }
     }
     let source_id = source_id.ok_or_else(|| bad_request("source_id is required"))?;
-    let (name, bytes) = pdf.ok_or_else(|| bad_request("pdf is required"))?;
     ensure_source(&s, source_id).await?;
     let id = Uuid::new_v4();
-    let key = format!("uploads/{id}.pdf");
-    s.storage.put(&key, bytes).await?;
+    // An empty key means the original wasn't kept, only its pages.
+    let (name, key) = match pdf {
+        Some((name, bytes)) => {
+            let key = format!("uploads/{id}.pdf");
+            s.storage.put(&key, bytes).await?;
+            (name, key)
+        }
+        None => (
+            Some(name_only.ok_or_else(|| bad_request("send pdf or name"))?),
+            String::new(),
+        ),
+    };
     sqlx::query("insert into uploads (id, source_id, kind, file_key, original_name) values ($1, $2, 'pdf', $3, $4)")
         .bind(id)
         .bind(source_id)
@@ -832,6 +846,7 @@ async fn delete_page(
     let mut keys = vec![key];
     if let Some((kind, file_key)) = upload_file
         && kind == "pdf"
+        && !file_key.is_empty()
     {
         keys.push(file_key);
     }

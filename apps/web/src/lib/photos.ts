@@ -46,7 +46,10 @@ export function uploadPhotos(
 	return postForm("/api/pages", form, onProgress);
 }
 
-/** Stores the PDF itself; its pages follow through `uploadPhotos` with the returned id. */
+/** Above this a PDF isn't sent whole (it may outlast the proxy's time limit); only its pages are. */
+const KEEP_PDF_BYTES = 5 * 1024 * 1024;
+
+/** Registers the PDF (keeping the file when small); its pages follow through `uploadPhotos`. */
 export async function uploadPdf(
 	sourceId: string,
 	pdf: File,
@@ -54,7 +57,8 @@ export async function uploadPdf(
 ): Promise<string> {
 	const form = new FormData();
 	form.append("source_id", sourceId);
-	form.append("pdf", pdf, pdf.name);
+	if (pdf.size <= KEEP_PDF_BYTES) form.append("pdf", pdf, pdf.name);
+	else form.append("name", pdf.name);
 	const body = await postForm<{ upload_id: string }>(
 		"/api/uploads/pdf",
 		form,
@@ -62,6 +66,24 @@ export async function uploadPdf(
 	);
 	return body.upload_id;
 }
+
+/** An upload the network dropped (worth retrying), as opposed to one the API refused. */
+export class NetworkError extends Error {}
+
+/** Runs `send` up to three times while the failure is the network's, waiting a little longer each time. */
+export async function withRetry<T>(send: () => Promise<T>): Promise<T> {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			return await send();
+		} catch (e) {
+			if (!(e instanceof NetworkError) || attempt === 3) throw e;
+			await new Promise((r) => setTimeout(r, attempt * 2000));
+		}
+	}
+}
+
+/** The proxy in front of the API cuts a request after about a minute. */
+const REQUEST_TIMEOUT_MS = 90_000;
 
 function postForm<T>(
 	url: string,
@@ -71,6 +93,7 @@ function postForm<T>(
 	return new Promise((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
 		xhr.open("POST", url);
+		xhr.timeout = REQUEST_TIMEOUT_MS;
 		xhr.upload.onprogress = (e) =>
 			e.lengthComputable && onProgress(e.loaded / e.total);
 		xhr.onload = () => {
@@ -80,17 +103,21 @@ function postForm<T>(
 			} catch {
 				body = null;
 			}
+			const message =
+				(body as { error?: string } | null)?.error ??
+				`Upload failed (${xhr.status})`;
 			if (xhr.status >= 200 && xhr.status < 300) resolve(body as T);
-			else
-				reject(
-					new Error(
-						(body as { error?: string } | null)?.error ??
-							`Upload failed (${xhr.status})`,
-					),
-				);
+			// Gateway and overload errors come from the network path, not the API.
+			else if (xhr.status === 408 || xhr.status === 429 || xhr.status >= 500)
+				reject(new NetworkError(message));
+			else reject(new Error(message));
 		};
-		xhr.onerror = () =>
-			reject(new Error("Upload failed — check your connection and try again"));
+		const dropped = () =>
+			reject(
+				new NetworkError("The connection dropped. Tap Upload to continue."),
+			);
+		xhr.onerror = dropped;
+		xhr.ontimeout = dropped;
 		xhr.send(form);
 	});
 }

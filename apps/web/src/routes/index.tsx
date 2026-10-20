@@ -30,14 +30,12 @@ import {
 } from "#/components/ui";
 import { api, unwrap } from "#/lib/api";
 import { countPdfPages, renderPdfPages } from "#/lib/pdf";
-import { shrinkPhoto, uploadPdf, uploadPhotos } from "#/lib/photos";
+import { shrinkPhoto, uploadPdf, uploadPhotos, withRetry } from "#/lib/photos";
 import { SOURCE_KEY } from "#/lib/source";
 
 export const Route = createFileRoute("/")({ component: UploadPage });
 
 const MAX_PHOTOS = 20;
-/** Rendered PDF pages go up this many at a time. */
-const PDF_BATCH = 10;
 
 type Picked = { id: string; file: File; preview: string };
 type PickedPdf = { file: File; pages: number | null };
@@ -142,44 +140,51 @@ function UploadPage() {
 	const pageCount = pdf ? (pdf.pages ?? 0) : picked.length;
 	const canUpload = !!source && pageCount > 0 && progress === null;
 
+	// One photo per request so each finishes well inside the proxy's time limit on a slow
+	// connection. Photos leave the list as they arrive, so Upload again sends the rest.
 	const uploadPicked = async (sourceId: string) => {
-		const photos: Blob[] = [];
-		for (const [i, p] of picked.entries()) {
-			setProgress(`Preparing photo ${i + 1} of ${picked.length}…`);
-			photos.push(await shrinkPhoto(p.file));
+		const total = picked.length;
+		let sent = 0;
+		for (const p of picked) {
+			setProgress(`Preparing ${sent + 1} of ${total}…`);
+			const jpeg = await shrinkPhoto(p.file);
+			await withRetry(() =>
+				uploadPhotos(sourceId, [jpeg], (f) =>
+					setProgress(
+						`Uploading ${sent + 1} of ${total}… ${Math.round(f * 100)}%`,
+					),
+				),
+			);
+			URL.revokeObjectURL(p.preview);
+			setPicked((prev) => prev.filter((x) => x.id !== p.id));
+			sent++;
+			qc.invalidateQueries({ queryKey: ["pages"] });
 		}
-		await uploadPhotos(sourceId, photos, (f) =>
-			setProgress(`Uploading… ${Math.round(f * 100)}%`),
-		);
-		for (const p of picked) URL.revokeObjectURL(p.preview);
-		setPicked([]);
-		return picked.length;
+		return sent;
 	};
 
 	const uploadPickedPdf = async (sourceId: string, file: File) => {
-		const uploadId = await uploadPdf(sourceId, file, (f) =>
-			setProgress(`Uploading the PDF… ${Math.round(f * 100)}%`),
+		const uploadId = await withRetry(() =>
+			uploadPdf(sourceId, file, (f) =>
+				setProgress(`Sending the PDF… ${Math.round(f * 100)}%`),
+			),
 		);
-		let batch: Blob[] = [];
 		let sent = 0;
-		const send = async (total: number) => {
-			await uploadPhotos(
-				sourceId,
-				batch,
-				(f) =>
-					setProgress(
-						`Sending pages ${sent + 1}–${sent + batch.length} of ${total}… ${Math.round(f * 100)}%`,
-					),
-				uploadId,
-			);
-			sent += batch.length;
-			batch = [];
-			qc.invalidateQueries({ queryKey: ["pages"] });
-		};
 		for await (const { page, pages, jpeg } of renderPdfPages(file)) {
 			setProgress(`Preparing page ${page} of ${pages}…`);
-			batch.push(jpeg);
-			if (batch.length === PDF_BATCH || page === pages) await send(pages);
+			await withRetry(() =>
+				uploadPhotos(
+					sourceId,
+					[jpeg],
+					(f) =>
+						setProgress(
+							`Uploading page ${page} of ${pages}… ${Math.round(f * 100)}%`,
+						),
+					uploadId,
+				),
+			);
+			sent++;
+			if (page % 5 === 0) qc.invalidateQueries({ queryKey: ["pages"] });
 		}
 		setPdf(null);
 		return sent;
