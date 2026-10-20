@@ -35,11 +35,16 @@ export function Button({
 		<button
 			type="button"
 			{...props}
-			className={cx("group mt-1 bg-ink disabled:opacity-50", radius, className)}
+			className={cx(
+				"group mt-1 bg-ink disabled:cursor-not-allowed",
+				radius,
+				className,
+			)}
 		>
 			<span
 				className={cx(
-					"block -translate-y-1 whitespace-nowrap border-[2.5px] border-ink font-display font-extrabold text-ink transition-transform duration-75 group-active:translate-y-0 group-disabled:translate-y-0",
+					// Disabled: flat white face and faded text, never a dimmed colour.
+					"block -translate-y-1 whitespace-nowrap border-[2.5px] border-ink font-display font-extrabold text-ink transition-transform duration-75 group-active:translate-y-0 group-disabled:translate-y-0 group-disabled:bg-paper group-disabled:text-faint",
 					radius,
 					fills[fill],
 					size === "sm" ? "px-3.5 py-2 text-sm" : "px-5 py-3.5 text-lg",

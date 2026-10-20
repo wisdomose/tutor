@@ -1,15 +1,20 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import {
+	type ChangeEvent,
+	type ReactNode,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { PageRow } from "#/components/PageRow";
 import { QueuePanel } from "#/components/QueuePanel";
 import { describeSource, SourceForm } from "#/components/SourceForm";
 import {
 	Button,
 	Card,
+	cx,
 	ErrorNote,
-	Field,
-	Label,
 	PageTitle,
 	Select,
 } from "#/components/ui";
@@ -46,6 +51,8 @@ function UploadPage() {
 
 	const [sourceId, setSourceId] = useState("");
 	const [adding, setAdding] = useState(false);
+	// Showing the source picker again after one was chosen.
+	const [changing, setChanging] = useState(false);
 	const [picked, setPicked] = useState<Picked[]>([]);
 	const [pdf, setPdf] = useState<PickedPdf | null>(null);
 	const [progress, setProgress] = useState<string | null>(null);
@@ -194,163 +201,229 @@ function UploadPage() {
 
 			<Card fill="lavender">
 				<div className="flex flex-col gap-4">
-					{adding ? (
-						<SourceForm
-							onCreated={(s) => {
-								chooseSource(s.id);
-								setAdding(false);
-							}}
-							onCancel={() => setAdding(false)}
-						/>
-					) : (
-						<div className="flex flex-col gap-1.5">
-							<div className="flex items-end gap-3">
-								<div className="min-w-0 flex-1">
-									<Field label="Source">
-										<Select
-											value={source ? sourceId : ""}
-											onChange={(e) => chooseSource(e.target.value)}
-										>
-											<option value="" disabled>
-												{sources.data?.length === 0
-													? "No sources yet — add one"
-													: "Choose a book or paper…"}
-											</option>
-											{groupBySubject(sources.data ?? []).map(
-												([subject, list]) => (
-													<optgroup key={subject} label={subject}>
-														{list.map((s) => (
-															<option key={s.id} value={s.id}>
-																{s.title}
-															</option>
-														))}
-													</optgroup>
-												),
-											)}
-										</Select>
-									</Field>
-								</div>
-								<Button fill="paper" onClick={() => setAdding(true)}>
-									New
-								</Button>
-							</div>
-							{source && (
-								<div className="text-xs font-bold text-muted">
-									{source.subject} ·{" "}
-									{describeSource(source, examName(source.exam_id))} ·{" "}
-									{source.page_count} page{source.page_count === 1 ? "" : "s"}{" "}
-									so far
-								</div>
-							)}
-						</div>
-					)}
+					<input
+						ref={cameraInput}
+						type="file"
+						accept="image/*"
+						capture="environment"
+						hidden
+						onChange={addFiles}
+					/>
+					<input
+						ref={galleryInput}
+						type="file"
+						accept="image/*"
+						multiple
+						hidden
+						onChange={addFiles}
+					/>
+					<input
+						ref={pdfInput}
+						type="file"
+						accept="application/pdf"
+						hidden
+						onChange={addPdf}
+					/>
 
-					<div>
-						<Label>
-							{pdf ? "PDF" : `Pages (${picked.length}/${MAX_PHOTOS})`}
-						</Label>
-						{pdf && (
-							<div className="mt-2 flex items-center gap-3 rounded-[13px] border-[2.5px] border-ink bg-paper p-3">
+					<Step n={1} label="Book or paper">
+						{adding ? (
+							<SourceForm
+								onCreated={(s) => {
+									chooseSource(s.id);
+									setAdding(false);
+									setChanging(false);
+								}}
+								onCancel={() => setAdding(false)}
+							/>
+						) : source && !changing ? (
+							<div className="flex items-start gap-3 rounded-[14px] border-[2.5px] border-ink bg-paper px-3 py-2.5">
 								<div className="min-w-0 flex-1">
-									<div className="truncate text-sm font-extrabold">
-										{pdf.file.name}
+									<div className="font-display text-lg leading-tight font-extrabold">
+										{source.title}
 									</div>
-									<div className="text-xs font-bold text-muted">
-										{pdf.pages === null
-											? "Counting pages…"
-											: `${pdf.pages} page${pdf.pages === 1 ? "" : "s"}`}
+									<div className="mt-0.5 text-xs font-bold text-muted">
+										{source.subject} ·{" "}
+										{describeSource(source, examName(source.exam_id))}
+										<br />
+										{source.page_count === 0
+											? "No pages yet"
+											: `${source.page_count} page${source.page_count === 1 ? "" : "s"} so far`}
 									</div>
 								</div>
 								<button
 									type="button"
-									onClick={() => setPdf(null)}
 									disabled={progress !== null}
-									aria-label="Remove PDF"
-									className="flex size-7 items-center justify-center rounded-full border-2 border-ink bg-paper font-extrabold"
+									onClick={() => setChanging(true)}
+									className="text-xs font-extrabold underline"
 								>
-									×
+									Change
 								</button>
 							</div>
-						)}
-						{picked.length > 0 && (
-							<div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-5">
-								{picked.map((p, i) => (
-									<div key={p.id} className="relative">
-										<img
-											src={p.preview}
-											alt={`Page ${i + 1}`}
-											className="aspect-[3/4] w-full rounded-[11px] border-[2.5px] border-ink object-cover"
-										/>
+						) : (
+							<div className="flex flex-col gap-2.5">
+								<Select
+									value={source ? sourceId : ""}
+									aria-label="Book or paper"
+									onChange={(e) => {
+										chooseSource(e.target.value);
+										setChanging(false);
+									}}
+								>
+									<option value="" disabled>
+										{sources.data?.length === 0
+											? "None yet — add one below"
+											: "Choose one…"}
+									</option>
+									{groupBySubject(sources.data ?? []).map(([subject, list]) => (
+										<optgroup key={subject} label={subject}>
+											{list.map((s) => (
+												<option key={s.id} value={s.id}>
+													{s.title}
+												</option>
+											))}
+										</optgroup>
+									))}
+								</Select>
+								<div className="flex gap-4">
+									<button
+										type="button"
+										onClick={() => setAdding(true)}
+										className="text-sm font-extrabold underline"
+									>
+										+ Add a new book or paper
+									</button>
+									{source && (
 										<button
 											type="button"
-											onClick={() => remove(p.id)}
-											aria-label={`Remove photo ${i + 1}`}
-											className="absolute -top-2 -right-2 flex size-7 items-center justify-center rounded-full border-2 border-ink bg-paper font-extrabold"
+											onClick={() => setChanging(false)}
+											className="text-sm font-extrabold text-muted underline"
 										>
-											×
+											Cancel
 										</button>
-									</div>
-								))}
+									)}
+								</div>
 							</div>
 						)}
-						<div className="mt-3 flex gap-3">
-							<input
-								ref={cameraInput}
-								type="file"
-								accept="image/*"
-								capture="environment"
-								hidden
-								onChange={addFiles}
-							/>
-							<input
-								ref={galleryInput}
-								type="file"
-								accept="image/*"
-								multiple
-								hidden
-								onChange={addFiles}
-							/>
-							<input
-								ref={pdfInput}
-								type="file"
-								accept="application/pdf"
-								hidden
-								onChange={addPdf}
-							/>
-							<Button
-								fill="paper"
-								className="flex-1"
-								onClick={() => cameraInput.current?.click()}
-							>
-								Take photo
-							</Button>
-							<Button
-								fill="paper"
-								className="flex-1"
-								onClick={() => galleryInput.current?.click()}
-							>
-								Photos
-							</Button>
-							<Button
-								fill="paper"
-								className="flex-1"
-								onClick={() => pdfInput.current?.click()}
-							>
-								PDF
-							</Button>
-						</div>
-					</div>
+					</Step>
+
+					{!adding && (
+						<Step
+							n={2}
+							label={
+								pdf
+									? "PDF"
+									: picked.length > 0
+										? `Pages · ${picked.length} of ${MAX_PHOTOS}`
+										: "Pages"
+							}
+							off={!source}
+						>
+							{!source ? (
+								<p className="text-sm font-bold">
+									Choose a book or paper first.
+								</p>
+							) : pdf ? (
+								<div className="flex items-center gap-3 rounded-[14px] border-[2.5px] border-ink bg-paper px-3 py-2.5">
+									<div className="min-w-0 flex-1">
+										<div className="truncate text-sm font-extrabold">
+											{pdf.file.name}
+										</div>
+										<div className="text-xs font-bold text-muted">
+											{pdf.pages === null
+												? "Counting pages…"
+												: `${pdf.pages} page${pdf.pages === 1 ? "" : "s"}, sent in order`}
+										</div>
+									</div>
+									<RemoveButton
+										label="Remove PDF"
+										disabled={progress !== null}
+										onClick={() => setPdf(null)}
+									/>
+								</div>
+							) : picked.length > 0 ? (
+								<div className="flex flex-col gap-2">
+									<div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
+										{picked.map((p, i) => (
+											<div key={p.id} className="relative">
+												<img
+													src={p.preview}
+													alt={`Page ${i + 1}`}
+													className="aspect-[3/4] w-full rounded-[10px] border-2 border-ink object-cover"
+												/>
+												<span className="absolute -top-2 -left-2 rounded-[7px] bg-ink px-1.5 font-display text-xs font-extrabold text-lime">
+													{i + 1}
+												</span>
+												<span className="absolute -top-2 -right-2">
+													<RemoveButton
+														label={`Remove photo ${i + 1}`}
+														disabled={progress !== null}
+														onClick={() => remove(p.id)}
+													/>
+												</span>
+											</div>
+										))}
+										{picked.length < MAX_PHOTOS && (
+											<button
+												type="button"
+												aria-label="Take another photo"
+												disabled={progress !== null}
+												onClick={() => cameraInput.current?.click()}
+												className="flex aspect-[3/4] items-center justify-center rounded-[10px] border-2 border-dashed border-ink font-display text-2xl font-extrabold"
+											>
+												+
+											</button>
+										)}
+									</div>
+									{picked.length < MAX_PHOTOS && (
+										<button
+											type="button"
+											disabled={progress !== null}
+											onClick={() => galleryInput.current?.click()}
+											className="self-start text-xs font-extrabold underline"
+										>
+											Add from your photos
+										</button>
+									)}
+								</div>
+							) : (
+								<div className="flex flex-col gap-2 rounded-[14px] border-[2.5px] border-dashed border-ink bg-paper/30 p-2.5">
+									<Button onClick={() => cameraInput.current?.click()}>
+										Take photo
+									</Button>
+									<div className="flex gap-2">
+										<Button
+											size="sm"
+											fill="paper"
+											className="flex-1"
+											onClick={() => galleryInput.current?.click()}
+										>
+											Photos
+										</Button>
+										<Button
+											size="sm"
+											fill="paper"
+											className="flex-1"
+											onClick={() => pdfInput.current?.click()}
+										>
+											PDF
+										</Button>
+									</div>
+									<p className="text-center text-xs font-bold">
+										In book order · up to {MAX_PHOTOS} photos
+									</p>
+								</div>
+							)}
+						</Step>
+					)}
 
 					{error !== null && <ErrorNote error={error} />}
 
-					<Button disabled={!canUpload} onClick={upload}>
-						{progress ??
-							(pageCount === 0
-								? "Add pages to upload"
-								: !source
-									? "Choose a source first"
-									: `Upload ${pageCount} page${pageCount === 1 ? "" : "s"} · ${source.title}`)}
-					</Button>
+					{!adding && (canUpload || progress !== null) && (
+						<Button disabled={!canUpload} onClick={upload}>
+							{progress ??
+								`Upload ${pageCount} page${pageCount === 1 ? "" : "s"}`}
+						</Button>
+					)}
 				</div>
 			</Card>
 
@@ -393,4 +466,56 @@ function groupBySubject<T extends { subject: string }>(list: T[]) {
 	for (const s of list)
 		groups.set(s.subject, [...(groups.get(s.subject) ?? []), s]);
 	return [...groups].sort(([a], [b]) => a.localeCompare(b));
+}
+
+/** A numbered step of the upload card; faded until it can be used. */
+function Step({
+	n,
+	label,
+	off,
+	children,
+}: {
+	n: number;
+	label: string;
+	off?: boolean;
+	children: ReactNode;
+}) {
+	return (
+		<section className={cx("flex flex-col gap-2.5", off && "opacity-50")}>
+			<div className="flex items-center gap-2 text-xs font-extrabold tracking-[1.2px] uppercase">
+				<span
+					className={cx(
+						"flex size-5 items-center justify-center rounded-[6px] font-display text-xs tracking-normal",
+						off ? "border-2 border-ink" : "bg-ink text-lime",
+					)}
+				>
+					{n}
+				</span>
+				{label}
+			</div>
+			{children}
+		</section>
+	);
+}
+
+function RemoveButton({
+	label,
+	disabled,
+	onClick,
+}: {
+	label: string;
+	disabled?: boolean;
+	onClick: () => void;
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			disabled={disabled}
+			aria-label={label}
+			className="flex size-6 items-center justify-center rounded-full border-2 border-ink bg-paper text-sm leading-none font-extrabold"
+		>
+			×
+		</button>
+	);
 }
