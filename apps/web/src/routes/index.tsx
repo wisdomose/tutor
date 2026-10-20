@@ -235,111 +235,115 @@ function UploadPage() {
 						onChange={addPdf}
 					/>
 
-					<Step n={1} label="Book or paper">
-						{adding ? (
-							<SourceForm
-								onCreated={(s) => {
-									chooseSource(s.id);
-									setAdding(false);
-									setChanging(false);
-								}}
-								onCancel={() => setAdding(false)}
-							/>
-						) : source && !changing ? (
-							<div className="flex items-start gap-3 rounded-[14px] border-[2.5px] border-ink bg-paper px-3 py-2.5">
-								<div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[10px] border-2 border-ink bg-lavender-soft">
-									{source.kind === "paper" ? (
-										<FileText
-											aria-hidden="true"
-											className="size-5"
-											strokeWidth={2.5}
-										/>
-									) : (
-										<BookOpen
-											aria-hidden="true"
-											className="size-5"
-											strokeWidth={2.5}
-										/>
-									)}
-								</div>
-								<div className="min-w-0 flex-1">
-									<div className="font-display text-lg leading-tight font-extrabold">
-										{source.title}
+					{adding ? (
+						<SourceForm
+							onCreated={(s) => {
+								chooseSource(s.id);
+								setAdding(false);
+								setChanging(false);
+							}}
+							onCancel={() => setAdding(false)}
+						/>
+					) : (
+						<Step n={1} label="Book or paper">
+							{source && !changing ? (
+								<div className="flex items-start gap-3 rounded-[14px] border-[2.5px] border-ink bg-paper px-3 py-2.5">
+									<div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[10px] border-2 border-ink bg-lavender-soft">
+										{source.kind === "paper" ? (
+											<FileText
+												aria-hidden="true"
+												className="size-5"
+												strokeWidth={2.5}
+											/>
+										) : (
+											<BookOpen
+												aria-hidden="true"
+												className="size-5"
+												strokeWidth={2.5}
+											/>
+										)}
 									</div>
-									<div className="mt-0.5 text-xs font-bold text-muted">
-										{source.subject} ·{" "}
-										{describeSource(source, examName(source.exam_id))}
-										<br />
-										{source.page_count === 0
-											? "No pages yet"
-											: `${source.page_count} page${source.page_count === 1 ? "" : "s"} so far`}
+									<div className="min-w-0 flex-1">
+										<div className="font-display text-lg leading-tight font-extrabold">
+											{source.title}
+										</div>
+										<div className="mt-0.5 text-xs font-bold text-muted">
+											{source.subject} ·{" "}
+											{describeSource(source, examName(source.exam_id))}
+											<br />
+											{source.page_count === 0
+												? "No pages yet"
+												: `${source.page_count} page${source.page_count === 1 ? "" : "s"} so far`}
+										</div>
 									</div>
-								</div>
-								<button
-									type="button"
-									disabled={progress !== null}
-									onClick={() => setChanging(true)}
-									className="flex items-center gap-1 text-xs font-extrabold underline"
-								>
-									<PenLine
-										aria-hidden="true"
-										className="size-3.5"
-										strokeWidth={2.75}
-									/>
-									Change
-								</button>
-							</div>
-						) : (
-							<div className="flex flex-col gap-2.5">
-								<Select
-									value={source ? sourceId : ""}
-									aria-label="Book or paper"
-									onChange={(e) => {
-										chooseSource(e.target.value);
-										setChanging(false);
-									}}
-								>
-									<option value="" disabled>
-										{sources.data?.length === 0
-											? "None yet — add one below"
-											: "Choose one…"}
-									</option>
-									{groupBySubject(sources.data ?? []).map(([subject, list]) => (
-										<optgroup key={subject} label={subject}>
-											{list.map((s) => (
-												<option key={s.id} value={s.id}>
-													{s.title}
-												</option>
-											))}
-										</optgroup>
-									))}
-								</Select>
-								<div className="flex gap-4">
 									<button
 										type="button"
-										onClick={() => setAdding(true)}
-										className="flex items-center gap-1 text-sm font-extrabold underline"
+										disabled={progress !== null}
+										onClick={() => setChanging(true)}
+										className="flex items-center gap-1 text-xs font-extrabold underline"
 									>
-										<Plus
+										<PenLine
 											aria-hidden="true"
-											className="size-4"
-											strokeWidth={3}
+											className="size-3.5"
+											strokeWidth={2.75}
 										/>
-										Add a new book or paper
+										Change
 									</button>
-									{source && (
+								</div>
+							) : (
+								<div className="flex flex-col gap-2.5">
+									<Select
+										value={source ? sourceId : ""}
+										aria-label="Book or paper"
+										onChange={(e) => {
+											chooseSource(e.target.value);
+											setChanging(false);
+										}}
+									>
+										<option value="" disabled>
+											{sources.data?.length === 0
+												? "None yet — add one below"
+												: "Choose one…"}
+										</option>
+										{groupBySubject(sources.data ?? []).map(
+											([subject, list]) => (
+												<optgroup key={subject} label={subject}>
+													{list.map((s) => (
+														<option key={s.id} value={s.id}>
+															{s.title}
+														</option>
+													))}
+												</optgroup>
+											),
+										)}
+									</Select>
+									<div className="flex gap-4">
 										<button
 											type="button"
-											onClick={() => setChanging(false)}
-											className="text-sm font-extrabold text-muted underline"
+											onClick={() => setAdding(true)}
+											className="flex items-center gap-1 text-sm font-extrabold underline"
 										>
-											Cancel
+											<Plus
+												aria-hidden="true"
+												className="size-4"
+												strokeWidth={3}
+											/>
+											Add a new book or paper
 										</button>
-									)}
+										{source && (
+											<button
+												type="button"
+												onClick={() => setChanging(false)}
+												className="text-sm font-extrabold text-muted underline"
+											>
+												Cancel
+											</button>
+										)}
+									</div>
 								</div>
-							</div>
-						)}
-					</Step>
+							)}
+						</Step>
+					)}
 
 					{!adding && (
 						<Step
@@ -353,11 +357,7 @@ function UploadPage() {
 							}
 							off={!source}
 						>
-							{!source ? (
-								<p className="text-sm font-bold">
-									Choose a book or paper first.
-								</p>
-							) : pdf ? (
+							{!source ? null : pdf ? (
 								<div className="flex items-center gap-3 rounded-[14px] border-[2.5px] border-ink bg-paper px-3 py-2.5">
 									<FileText
 										aria-hidden="true"
@@ -462,9 +462,6 @@ function UploadPage() {
 											PDF
 										</Button>
 									</div>
-									<p className="text-center text-xs font-bold">
-										In book order · up to {MAX_PHOTOS} photos
-									</p>
 								</div>
 							)}
 						</Step>

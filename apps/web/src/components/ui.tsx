@@ -25,14 +25,16 @@ export function Button({
 	fill = "lime",
 	size = "md",
 	icon: Icon,
+	iconEnd = false,
 	className,
 	children,
 	...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
 	fill?: Fill;
 	size?: "sm" | "md";
-	/** Shown before the label, in the label's colour. */
+	/** Shown before the label (after it with `iconEnd`), in the label's colour. */
 	icon?: LucideIcon;
+	iconEnd?: boolean;
 }) {
 	const radius = size === "sm" ? "rounded-[13px]" : "rounded-[16px]";
 	return (
@@ -53,6 +55,7 @@ export function Button({
 					fills[fill],
 					size === "sm" ? "px-3.5 py-2 text-sm" : "px-5 py-3.5 text-lg",
 					Icon && "flex items-center justify-center gap-2",
+					Icon && iconEnd && "flex-row-reverse",
 				)}
 			>
 				{Icon && (
